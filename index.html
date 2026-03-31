@@ -178,8 +178,8 @@
     <div class="logo-icono">🏢</div>
   </div>
   <div class="tabs">
-    <button class="tab activo" onclick="cambiarVista('conserje',this)">📦 Conserje</button>
-    <button class="tab" onclick="cambiarVista('tesorera',this)">📊 Tesorera</button>
+    <button class="tab activo" onclick="cambiarVista('conserje',this)">📦 Personal</button>
+    <button class="tab" onclick="cambiarVista('tesorera',this)">📊 Directiva</button>
     <button class="tab" onclick="cambiarVista('activos',this)">🪑 Activos</button>
   </div>
 </div>
@@ -368,7 +368,7 @@ function cambiarVista(v, btn) {
   if (!API_URL) { mostrarVista("config"); return; }
   mostrarVista(v);
   if (v === "conserje") renderItems();
-  if (v === "tesorera") cargarTesorera();
+  if (v === "tesorera") cargarDirectiva();
   if (v === "activos")  cargarActivos();
 }
 
@@ -379,7 +379,7 @@ function cambiarSubtab(sub, btn) {
   ["saldo","consumo","compras","historial"].forEach(id =>
     document.getElementById("sub-"+id).style.display = sub===id ? "block" : "none"
   );
-  cargarTesorera();
+  cargarDirectiva();
 }
 
 function cambiarSubtabActivos(sub, btn) {
@@ -492,7 +492,7 @@ async function confirmarMovimiento() {
   if (!cantidad||cantidad<=0) { mostrarNotif("⚠️ Ingresa una cantidad válida"); return; }
   if (!tipoMovActual) return;
   try {
-    const data = await api({ accion: tipoMovActual==="ENTRADA"?"entrada":"salida", itemId: itemActual.id, cantidad, nota, registradoPor:"Conserje" });
+    const data = await api({ accion: tipoMovActual==="ENTRADA"?"entrada":"salida", itemId: itemActual.id, cantidad, nota, registradoPor:"Personal" });
     if (!data.ok) throw new Error(data.error);
     const idx = items.findIndex(i => i.id===itemActual.id);
     if (idx>=0) { items[idx].stock=data.stockNuevo; items[idx].estado=data.estado; }
@@ -505,7 +505,7 @@ async function confirmarMovimiento() {
 // ============================================================
 // TESORERA
 // ============================================================
-async function cargarTesorera() {
+async function cargarDirectiva() {
   if (subtabActual==="saldo") renderSaldo();
   else if (subtabActual==="consumo") await renderConsumo();
   else if (subtabActual==="compras") await renderCompras();
