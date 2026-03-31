@@ -296,11 +296,13 @@
       <button class="subtab activo" onclick="cambiarSubtab('saldo',this)">Saldo</button>
       <button class="subtab" onclick="cambiarSubtab('consumo',this)">Consumo</button>
       <button class="subtab" onclick="cambiarSubtab('compras',this)">Compras</button>
+      <button class="subtab" onclick="cambiarSubtab('ratios',this)">Ratios</button>
       <button class="subtab" onclick="cambiarSubtab('historial',this)">Historial</button>
     </div>
     <div id="sub-saldo"></div>
     <div id="sub-consumo" style="display:none"></div>
     <div id="sub-compras" style="display:none"></div>
+    <div id="sub-ratios" style="display:none"></div>
     <div id="sub-historial" style="display:none"></div>
   </div>
 
@@ -376,10 +378,18 @@ function cambiarSubtab(sub, btn) {
   document.querySelectorAll("#vista-tesorera .subtab").forEach(t => t.classList.remove("activo"));
   btn.classList.add("activo");
   subtabActual = sub;
-  ["saldo","consumo","compras","historial"].forEach(id =>
+  ["saldo","consumo","compras","ratios","historial"].forEach(id =>
     document.getElementById("sub-"+id).style.display = sub===id ? "block" : "none"
   );
   cargarDirectiva();
+}
+
+async function cargarDirectiva() {
+  if (subtabActual==="saldo") renderSaldo();
+  else if (subtabActual==="consumo") await renderConsumo();
+  else if (subtabActual==="compras") await renderCompras();
+  else if (subtabActual==="ratios") await renderRatiosHistoricos();
+  else if (subtabActual==="historial") await renderHistorial();
 }
 
 function cambiarSubtabActivos(sub, btn) {
@@ -505,12 +515,6 @@ async function confirmarMovimiento() {
 // ============================================================
 // TESORERA
 // ============================================================
-async function cargarDirectiva() {
-  if (subtabActual==="saldo") renderSaldo();
-  else if (subtabActual==="consumo") await renderConsumo();
-  else if (subtabActual==="compras") await renderCompras();
-  else if (subtabActual==="historial") await renderHistorial();
-}
 
 function renderSaldo() {
   const el = document.getElementById("sub-saldo");
@@ -592,18 +596,16 @@ function renderTablaCompras() {
   const el = document.getElementById("sub-compras");
   if (!datosCompra) return;
 
-  // Calcular con meses elegidos
   const sugs = datosCompra.map(s => ({
     ...s,
     comprarSugerido: Math.max(0, Math.ceil(s.consumoMensualProm * mesesCompra) - s.stockActual)
   }));
 
   const conCompra  = sugs.filter(s => s.comprarSugerido > 0);
-  const sinCompra  = sugs.filter(s => s.comprarSugerido === 0);
+  const sinCompra  = sugs.filter(s => s.comprarSugerido === 0 && s.consumoMensualProm > 0);
   const sinDatos   = sugs.filter(s => s.consumoMensualProm === 0);
 
   el.innerHTML=`
-    <!-- SELECTOR DE MESES -->
     <div style="background:white;border-radius:var(--radio);padding:16px;box-shadow:var(--sombra);margin-bottom:14px;">
       <div style="font-size:13px;font-weight:700;color:var(--gris);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">¿Para cuántos meses quieres comprar?</div>
       <div style="display:flex;align-items:center;gap:12px;">
@@ -615,50 +617,83 @@ function renderTablaCompras() {
         <button onclick="cambiarMeses(1)" style="width:40px;height:40px;border-radius:10px;border:1.5px solid var(--borde);background:white;font-size:20px;cursor:pointer;font-weight:700;">+</button>
       </div>
       <div style="font-size:11px;color:var(--gris);margin-top:8px;text-align:center;">
-        Ratio calculado desde el último ingreso de cada ítem hasta hoy
+        Fórmula: (Ratio mensual × ${mesesCompra}) − Stock actual
       </div>
     </div>
 
-    <!-- KPIs -->
     <div class="kpis">
       <div class="kpi-card rojo"><div class="kpi-label">A comprar</div><div class="kpi-val">${conCompra.length}</div><div class="kpi-sub">ítems</div></div>
-      <div class="kpi-card verde"><div class="kpi-label">Suficiente</div><div class="kpi-val">${sinCompra.length - sinDatos.length}</div><div class="kpi-sub">ítems</div></div>
-      <div class="kpi-card"><div class="kpi-label">Sin historial</div><div class="kpi-val">${sinDatos.length}</div><div class="kpi-sub">sin movimientos</div></div>
-      <div class="kpi-card azul" style=""><div class="kpi-label">Período</div><div class="kpi-val" style="font-size:20px">${mesesCompra}m</div><div class="kpi-sub">de cobertura</div></div>
+      <div class="kpi-card verde"><div class="kpi-label">Suficiente</div><div class="kpi-val">${sinCompra.length}</div><div class="kpi-sub">ítems</div></div>
+      <div class="kpi-card"><div class="kpi-label">Sin ratio</div><div class="kpi-val">${sinDatos.length}</div><div class="kpi-sub">sin datos</div></div>
     </div>
 
-    <!-- TABLA -->
     ${conCompra.length > 0 ? `
     <div class="tabla-wrap">
-      <div class="tabla-titulo">
-        Lista de compra — ${mesesCompra} meses
-        <span style="font-size:11px;color:var(--gris)">${conCompra.length} ítems</span>
-      </div>
+      <div class="tabla-titulo">Lista de compra — ${mesesCompra} meses <span style="font-size:11px;color:var(--gris)">${conCompra.length} ítems</span></div>
       <div style="overflow-x:auto"><table>
-        <tr><th>Ítem</th><th>Stock</th><th>Ratio/mes</th><th>Período</th><th>Comprar</th></tr>
+        <tr><th>Ítem</th><th>Stock</th><th>Ratio/mes</th><th>Fuente</th><th>Comprar</th></tr>
         ${conCompra.map(s=>`<tr>
           <td>
             <div style="font-weight:600;font-size:12px;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.nombre}</div>
             <div style="font-size:10px;color:var(--gris)">${s.categoria}</div>
           </td>
           <td style="${s.alerta?'color:var(--rojo);font-weight:700':''}">${s.stockActual} <span style="font-size:10px;color:var(--gris)">${s.unidad}</span></td>
-          <td style="color:var(--gris);font-weight:600">${s.consumoMensualProm}</td>
-          <td style="color:var(--gris);font-size:11px">${s.mesesDesdeUltimoIngreso ? s.mesesDesdeUltimoIngreso+'m' : '—'}</td>
+          <td style="font-weight:600">${s.consumoMensualProm}</td>
+          <td><span class="badge ${s.tipoRatio==='calculado'?'badge-verde':s.tipoRatio==='manual'?'badge-azul':'badge-gris'}" style="font-size:10px">${s.tipoRatio==='calculado'?'Auto':s.tipoRatio==='manual'?'Manual':'—'}</span></td>
           <td><span class="badge badge-rojo" style="font-size:13px;font-weight:800">${s.comprarSugerido} <span style="font-size:10px">${s.unidad}</span></span></td>
         </tr>`).join("")}
       </table></div>
     </div>` : `<div class="vacio"><div class="vacio-icono">✅</div>Stock suficiente para ${mesesCompra} meses</div>`}
 
-    <p style="font-size:11px;color:var(--gris);padding:4px 4px 16px;line-height:1.6">
-      * Fórmula: (Ratio mensual × ${mesesCompra} meses) − Stock actual<br>
-      * Ratio = consumo total desde último ingreso ÷ meses transcurridos<br>
-      * Ítems sin historial de movimientos no aparecen en la lista
+    ${sinDatos.length > 0 ? `
+    <div style="background:white;border-radius:var(--radio);padding:14px 16px;box-shadow:var(--sombra);margin-top:10px;">
+      <div style="font-size:12px;font-weight:700;color:var(--gris);margin-bottom:6px">SIN RATIO — ${sinDatos.length} ítems</div>
+      <div style="font-size:12px;color:var(--gris);line-height:1.6">${sinDatos.map(s=>s.nombre).join(' · ')}</div>
+      <div style="font-size:11px;color:var(--gris);margin-top:6px">Ingresa el ratio histórico en la columna I del Sheet "Inventario"</div>
+    </div>` : ''}
+
+    <p style="font-size:11px;color:var(--gris);padding:8px 4px 16px;line-height:1.6">
+      🟢 Auto = ratio calculado desde movimientos · 🔵 Manual = ratio histórico del Sheet
     </p>`;
 }
 
 function cambiarMeses(delta) {
   mesesCompra = Math.max(1, Math.min(24, mesesCompra + delta));
   renderTablaCompras();
+}
+
+async function renderRatiosHistoricos() {
+  const el = document.getElementById("sub-ratios");
+  el.innerHTML='<div class="loader"><div class="spinner"></div></div>';
+  try {
+    const data = await api({accion:"getRatios"});
+    if (!data.ok) throw new Error(data.error);
+    const ratios = data.ratios;
+    if (!ratios.length) {
+      el.innerHTML='<div class="vacio"><div class="vacio-icono">📈</div>Sin historial de ratios aún.<br><small>Se registran automáticamente al guardar períodos.</small></div>';
+      return;
+    }
+    // Agrupar por ítem
+    const porItem = {};
+    ratios.forEach(r => {
+      if (!porItem[r.itemId]) porItem[r.itemId] = { nombre: r.nombre, categoria: r.categoria, periodos: [] };
+      porItem[r.itemId].periodos.push(r);
+    });
+    el.innerHTML = Object.entries(porItem).map(([id, d]) => `
+      <div class="tabla-wrap" style="margin-bottom:12px">
+        <div class="tabla-titulo">${d.nombre} <span style="font-size:11px;color:var(--gris)">${d.categoria}</span></div>
+        <table>
+          <tr><th>Período</th><th>Meses</th><th>Consumo</th><th>Ratio/mes</th><th>Tipo</th></tr>
+          ${d.periodos.map(p=>`<tr>
+            <td style="font-weight:600">${p.periodo}</td>
+            <td>${p.meses}</td>
+            <td>${p.consumoTotal}</td>
+            <td style="font-weight:700;color:var(--azul)">${p.ratioMensual}</td>
+            <td><span class="badge ${p.tipo==='Calculado'?'badge-verde':'badge-azul'}" style="font-size:10px">${p.tipo}</span></td>
+          </tr>`).join("")}
+        </table>
+      </div>`).join("");
+  } catch(e) { el.innerHTML=`<div class="vacio">❌ ${e.message}</div>`; }
 }
 
 async function renderHistorial() {
