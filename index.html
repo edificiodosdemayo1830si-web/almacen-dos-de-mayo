@@ -634,7 +634,7 @@ function renderTablaCompras() {
         <tr><th>Ítem</th><th>Stock</th><th>Ratio/mes</th><th>Fuente</th><th>Comprar</th></tr>
         ${conCompra.map(s=>`<tr>
           <td>
-            <div style="font-weight:600;font-size:12px;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.nombre}</div>
+            <div style="font-weight:600;font-size:12px;max-width:150px;line-height:1.3">${s.nombre}</div>
             <div style="font-size:10px;color:var(--gris)">${s.categoria}</div>
           </td>
           <td style="${s.alerta?'color:var(--rojo);font-weight:700':''}">${s.stockActual} <span style="font-size:10px;color:var(--gris)">${s.unidad}</span></td>
