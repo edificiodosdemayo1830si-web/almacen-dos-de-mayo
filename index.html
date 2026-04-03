@@ -642,14 +642,24 @@ function renderTablaCompras() {
           <td>
             <input type="number" id="qty_${i}" value="${s.comprarSugerido}" min="0"
               style="width:70px;padding:8px;border:1.5px solid var(--borde);border-radius:8px;font-size:14px;font-weight:700;text-align:center;font-family:var(--font)"
-              data-nombre="${s.nombre}" data-unidad="${s.unidad}">
+              data-nombre="${s.nombre}" data-unidad="${s.unidad}" data-categoria="${s.categoria}">
           </td>
         </tr>`).join("")}
       </table></div>
     </div>
-    <button onclick="generarPedidoWhatsApp(${conCompra.length})" class="btn btn-verde" style="margin-top:4px">
-      📋 Generar pedido para WhatsApp
-    </button>` : `<div class="vacio"><div class="vacio-icono">✅</div>Stock suficiente para ${mesesCompra} meses</div>`}
+    <button onclick="generarPedidoWhatsApp(${conCompra.length})" class="btn btn-verde" style="margin-top:8px">
+      📋 Copiar pedido completo
+    </button>
+    <div style="margin-top:10px;background:white;border-radius:var(--radio);padding:14px 16px;box-shadow:var(--sombra)">
+      <div style="font-size:12px;font-weight:700;color:var(--gris);margin-bottom:10px;text-transform:uppercase;letter-spacing:0.5px">Copiar por proveedor / categoría:</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px">
+        ${[...new Set(conCompra.map(s=>s.categoria))].map(cat=>`
+          <button onclick="generarPedidoCategoria(${conCompra.length},'${cat}')"
+            class="btn-sm" style="background:var(--gris-claro);color:var(--azul);border:1.5px solid var(--borde)">
+            ${cat}
+          </button>`).join("")}
+      </div>
+    </div>` : `<div class="vacio"><div class="vacio-icono">✅</div>Stock suficiente para ${mesesCompra} meses</div>`}
 
     ${sinDatos.length > 0 ? `
     <div style="background:white;border-radius:var(--radio);padding:14px 16px;box-shadow:var(--sombra);margin-top:10px;">
@@ -668,23 +678,56 @@ function cambiarMeses(delta) {
   renderTablaCompras();
 }
 
-function generarPedidoWhatsApp(n) {
+const CAT_EMOJI = {
+  "Limpieza": "🧹", "Electricidad": "💡", "Gasfitería": "🔧",
+  "Ferretería": "🔩", "Pintura": "🎨", "Seguridad": "🛡️", "Varios": "📦"
+};
+
+function recopilarPedido(n, soloCategoria) {
   const hoy = new Date().toLocaleDateString("es-PE");
-  let lineas = ["📦 *PEDIDO DE COMPRAS*\n🏢 Edificio Dos de Mayo 1830\n📅 Fecha: " + hoy + "\n"];
-  let hayItems = false;
+  const porCategoria = {};
   for (let i = 0; i < n; i++) {
     const input = document.getElementById("qty_" + i);
     if (!input) continue;
     const qty = parseInt(input.value);
     if (!qty || qty <= 0) continue;
-    lineas.push("• " + input.dataset.nombre + ": *" + qty + " " + input.dataset.unidad + "*");
-    hayItems = true;
+    const cat = input.dataset.categoria || "Varios";
+    if (soloCategoria && cat !== soloCategoria) continue;
+    if (!porCategoria[cat]) porCategoria[cat] = [];
+    porCategoria[cat].push("• " + input.dataset.nombre + ": *" + qty + " " + input.dataset.unidad + "*");
   }
-  if (!hayItems) { mostrarNotif("⚠️ Ingresa al menos una cantidad"); return; }
+  return porCategoria;
+}
+
+function generarPedidoWhatsApp(n) {
+  const hoy = new Date().toLocaleDateString("es-PE");
+  const porCategoria = recopilarPedido(n, null);
+  if (!Object.keys(porCategoria).length) { mostrarNotif("⚠️ Ingresa al menos una cantidad"); return; }
+  let lineas = ["📦 *PEDIDO DE COMPRAS*", "🏢 Edificio Dos de Mayo 1830", "📅 Fecha: " + hoy, ""];
+  Object.entries(porCategoria).forEach(([cat, items]) => {
+    const emoji = CAT_EMOJI[cat] || "📦";
+    lineas.push(emoji + " *" + cat.toUpperCase() + "*");
+    items.forEach(i => lineas.push(i));
+    lineas.push("");
+  });
+  lineas.push("_Generado desde app Almacén_");
+  copiarAlPortapapeles(lineas.join("\n"), "✅ Pedido completo copiado");
+}
+
+function generarPedidoCategoria(n, categoria) {
+  const hoy = new Date().toLocaleDateString("es-PE");
+  const porCategoria = recopilarPedido(n, categoria);
+  if (!Object.keys(porCategoria).length) { mostrarNotif("⚠️ Sin items en " + categoria); return; }
+  const emoji = CAT_EMOJI[categoria] || "📦";
+  let lineas = ["📦 *PEDIDO — " + categoria.toUpperCase() + "*", "🏢 Edificio Dos de Mayo 1830", "📅 Fecha: " + hoy, ""];
+  porCategoria[categoria].forEach(i => lineas.push(i));
   lineas.push("\n_Generado desde app Almacén_");
-  const texto = lineas.join("\n");
+  copiarAlPortapapeles(lineas.join("\n"), "✅ Pedido " + categoria + " copiado");
+}
+
+function copiarAlPortapapeles(texto, msg) {
   navigator.clipboard.writeText(texto).then(() => {
-    mostrarNotif("✅ Pedido copiado — pega en WhatsApp");
+    mostrarNotif(msg);
   }).catch(() => {
     alert(texto);
   });
