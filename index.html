@@ -281,6 +281,31 @@
   </div>
 </div>
 
+<!-- MODAL EDITAR MOVIMIENTO -->
+<div id="modal-editar-mov" class="modal-overlay" style="display:none" onclick="if(event.target===this)cerrarModalEditarMov()">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-titulo">Corregir cantidad</div>
+    <div class="modal-subtitulo" id="em-subtitulo"></div>
+    <input type="hidden" id="em-id">
+    <input type="hidden" id="em-itemid">
+    <input type="hidden" id="em-tipo">
+    <input type="hidden" id="em-cant-original">
+    <div class="modal-stock-actual">
+      <span>Cantidad registrada</span>
+      <strong id="em-cant-actual">—</strong>
+    </div>
+    <div class="input-group">
+      <label>Nueva cantidad correcta</label>
+      <input type="number" id="em-cant-nueva" min="1" placeholder="0" inputmode="numeric">
+    </div>
+    <div class="modal-botones">
+      <button class="btn btn-gris" onclick="cerrarModalEditarMov()">Cancelar</button>
+      <button class="btn btn-primario" onclick="guardarEdicionMovimiento()">Guardar corrección</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL BAJA -->
 <div id="modal-baja" class="modal-overlay" style="display:none" onclick="cerrarModalBajaOverlay(event)">
   <div class="modal">
@@ -956,6 +981,7 @@ async function renderHistorial() {
         const tipo=m.tipo.startsWith("AJUSTE")?"ajuste":m.tipo==="ENTRADA"?"entrada":"salida";
         const icono=tipo==="entrada"?"➕":tipo==="salida"?"➖":"🔄";
         const sign=tipo==="entrada"?"+":tipo==="salida"?"-":"~";
+        const esEditable = ["ENTRADA","SALIDA"].includes(m.tipo);
         return`<div class="mov-item">
           <div class="mov-tipo-icono ${tipo}">${icono}</div>
           <div class="mov-info">
@@ -963,9 +989,67 @@ async function renderHistorial() {
             <div class="mov-meta">${m.fecha} ${m.hora} · ${m.categoria}${m.nota?' · '+m.nota:''}</div>
           </div>
           <div class="mov-cant ${tipo}">${sign}${m.cantidad}</div>
+          ${esEditable ? `<div style="display:flex;flex-direction:column;gap:4px;margin-left:8px;flex-shrink:0">
+            <button onclick="abrirEditarMovimiento('${m.id}',${m.itemId},${m.cantidad},'${m.tipo}')" style="width:28px;height:28px;border-radius:50%;border:none;background:#f1f5f9;font-size:13px;cursor:pointer">✏️</button>
+            <button onclick="eliminarMovimiento('${m.id}',${m.itemId},${m.cantidad},'${m.tipo}')" style="width:28px;height:28px;border-radius:50%;border:none;background:#f1f5f9;font-size:13px;cursor:pointer">🗑️</button>
+          </div>` : ""}
         </div>`;
       }).join("");
   } catch(e) { el.innerHTML=`<div class="vacio">❌ ${e.message}</div>`; }
+}
+
+// ============================================================
+// EDITAR / ELIMINAR MOVIMIENTOS
+// ============================================================
+function abrirEditarMovimiento(idMov, itemId, cantActual, tipo) {
+  document.getElementById("em-id").value = idMov;
+  document.getElementById("em-itemid").value = itemId;
+  document.getElementById("em-tipo").value = tipo;
+  document.getElementById("em-cant-original").value = cantActual;
+  document.getElementById("em-cant-actual").textContent = cantActual;
+  document.getElementById("em-cant-nueva").value = cantActual;
+  const item = items.find(i => i.id == itemId);
+  document.getElementById("em-subtitulo").textContent = (item ? item.nombre : "Ítem") + " · " + tipo;
+  document.getElementById("modal-editar-mov").style.display = "flex";
+}
+
+function cerrarModalEditarMov() { document.getElementById("modal-editar-mov").style.display="none"; }
+
+async function guardarEdicionMovimiento() {
+  const idMov       = document.getElementById("em-id").value;
+  const itemId      = document.getElementById("em-itemid").value;
+  const tipo        = document.getElementById("em-tipo").value;
+  const cantOriginal= parseInt(document.getElementById("em-cant-original").value);
+  const cantNueva   = parseInt(document.getElementById("em-cant-nueva").value);
+  if (!cantNueva || cantNueva <= 0) { mostrarNotif("⚠️ Ingresa una cantidad válida"); return; }
+  if (cantNueva === cantOriginal) { cerrarModalEditarMov(); return; }
+  const botones = document.querySelectorAll("#modal-editar-mov .modal-botones .btn");
+  botones.forEach(b => { b.disabled=true; b.style.opacity="0.6"; });
+  try {
+    const data = await api({ accion:"editarMovimiento", idMov, itemId, cantOriginal, cantNueva, tipo });
+    if (!data.ok) throw new Error(data.error);
+    cerrarModalEditarMov();
+    await cargarItems();
+    await renderHistorial();
+    mostrarNotif("✅ Movimiento corregido · Stock actualizado");
+  } catch(e) {
+    botones.forEach(b => { b.disabled=false; b.style.opacity="1"; });
+    mostrarNotif("❌ "+e.message);
+  }
+}
+
+async function eliminarMovimiento(idMov, itemId, cantidad, tipo) {
+  const item = items.find(i => i.id == itemId);
+  const nombre = item ? item.nombre : "este ítem";
+  const confirma = confirm(`¿Eliminar este movimiento de ${nombre}?\n\nEl stock se ajustará automáticamente.\nEsta acción no se puede deshacer.`);
+  if (!confirma) return;
+  try {
+    const data = await api({ accion:"eliminarMovimiento", idMov, itemId, cantidad, tipo });
+    if (!data.ok) throw new Error(data.error);
+    await cargarItems();
+    await renderHistorial();
+    mostrarNotif("✅ Movimiento eliminado · Stock actualizado");
+  } catch(e) { mostrarNotif("❌ "+e.message); }
 }
 
 // ============================================================
@@ -1288,9 +1372,9 @@ function renderPendientes() {
       </div>
       ${r._montoAlto ? `<div class="serv-alerta-monto">⚠️ Monto inusual — S/ ${Number(r.monto).toFixed(2)} vs promedio S/ ${r._prom.toFixed(2)}</div>` : ""}
       <div style="display:flex;gap:8px;margin-top:12px">
-        <button class="btn btn-verde" style="flex:2;padding:10px;font-size:13px" onclick="abrirPago(${r.fila})">✅ Marcar pagado</button>
-        <button class="btn-sm" style="flex:1;background:#dbeafe;color:var(--azul2);justify-content:center" onclick="abrirEditarRecibo(${r.fila})">✏️ Editar</button>
-        <button class="btn-sm" style="flex:1;background:#fee2e2;color:var(--rojo);justify-content:center" onclick="eliminarRecibo(${r.fila})">🗑️ Borrar</button>
+        <button class="btn btn-verde" style="flex:1;padding:10px;font-size:13px" onclick="abrirPago(${r.fila})">✅ Marcar pagado</button>
+        <button onclick="abrirEditarRecibo(${r.fila})" style="width:36px;height:36px;border-radius:50%;border:none;background:#f1f5f9;font-size:16px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center">✏️</button>
+        <button onclick="eliminarRecibo(${r.fila})" style="width:36px;height:36px;border-radius:50%;border:none;background:#f1f5f9;font-size:16px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center">🗑️</button>
       </div>
     </div>`;
   };
@@ -1319,27 +1403,7 @@ function renderPendientes() {
     html += pendientes.map(renderCard).join("");
   }
   if (pagados.length) {
-    html += `<div class="serv-mes-header">✅ Pagados recientemente</div>`;
-    html += pagados.slice(0,5).map(r => {
-      const cfg = SERV_CONFIG[r.servicio] || { nombre:r.servicio, emoji:"📄", clase:"" };
-      return `<div class="serv-card s-verde" style="opacity:0.85">
-        <div class="serv-head">
-          <div class="serv-icono ${cfg.clase}">${cfg.emoji}</div>
-          <div class="serv-nombre">${cfg.nombre}</div>
-          <span class="serv-estado-badge verde">Pagado</span>
-        </div>
-        <div class="serv-datos">
-          <div class="serv-dato"><span class="serv-dato-label">Mes</span><span class="serv-dato-val">${fmtMes(r.mes)}</span></div>
-          <div class="serv-dato"><span class="serv-dato-label">Monto</span><span class="serv-dato-val">S/ ${Number(r.monto).toFixed(2)}</span></div>
-          <div class="serv-dato"><span class="serv-dato-label">Pagado el</span><span class="serv-dato-val">${fmtFecha(r.fechaPago)}</span></div>
-          <div class="serv-dato"><span class="serv-dato-label">Confirmó</span><span class="serv-dato-val">${r.pagadoPor||"—"}</span></div>
-        </div>
-        <div style="display:flex;gap:8px;margin-top:12px">
-          <button class="btn-sm" style="flex:1;background:#dbeafe;color:var(--azul2);justify-content:center" onclick="abrirEditarRecibo(${r.fila})">✏️ Editar</button>
-          <button class="btn-sm" style="flex:1;background:#fee2e2;color:var(--rojo);justify-content:center" onclick="eliminarRecibo(${r.fila})">🗑️ Borrar</button>
-        </div>
-      </div>`;
-    }).join("");
+    // Los pagados se ven solo en Historial — aquí no se muestran
   }
 
   el.innerHTML = html;
@@ -1381,6 +1445,10 @@ function renderHistorialServ() {
           <span class="hist-monto ${alto?"alto":"normal"}">
             S/ ${Number(r.monto).toFixed(2)}
             ${alto?'<span style="font-size:10px;color:var(--rojo)"> ⚠️</span>':""}
+          </span>
+          <span style="display:flex;gap:4px;margin-left:8px">
+            <button onclick="abrirEditarRecibo(${r.fila})" style="width:28px;height:28px;border-radius:50%;border:none;background:#f1f5f9;font-size:13px;cursor:pointer">✏️</button>
+            <button onclick="eliminarRecibo(${r.fila})" style="width:28px;height:28px;border-radius:50%;border:none;background:#f1f5f9;font-size:13px;cursor:pointer">🗑️</button>
           </span>
         </div>`;
       }).join("")}
