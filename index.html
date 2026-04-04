@@ -168,6 +168,44 @@
   .separador { height:1px; background:var(--borde); margin:16px 0; }
   .seccion-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
   .seccion-titulo { font-size:13px; font-weight:700; color:var(--gris); text-transform:uppercase; letter-spacing:0.5px; }
+
+  /* PAGO SERVICIOS */
+  .serv-card { background:white; border-radius:var(--radio); padding:16px; box-shadow:var(--sombra); margin-bottom:12px; border-left:5px solid var(--borde); cursor:pointer; transition:transform 0.15s; }
+  .serv-card:active { transform:scale(0.98); }
+  .serv-card.s-rojo    { border-left-color:var(--rojo); }
+  .serv-card.s-amarillo{ border-left-color:var(--amarillo); }
+  .serv-card.s-verde   { border-left-color:var(--verde); }
+  .serv-card.s-gris    { border-left-color:var(--gris); }
+  .serv-head { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+  .serv-icono { width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:24px; flex-shrink:0; }
+  .serv-icono.luz     { background:#fef9c3; }
+  .serv-icono.luzcf   { background:#ffedd5; }
+  .serv-icono.agua    { background:#dbeafe; }
+  .serv-icono.tlf     { background:#f3e8ff; }
+  .serv-icono.cafe    { background:#fef3c7; }
+  .serv-nombre { font-size:15px; font-weight:700; flex:1; }
+  .serv-estado-badge { font-size:11px; font-weight:700; padding:4px 10px; border-radius:20px; flex-shrink:0; }
+  .serv-estado-badge.rojo     { background:#fee2e2; color:var(--rojo); }
+  .serv-estado-badge.amarillo { background:#fef3c7; color:var(--amarillo); }
+  .serv-estado-badge.verde    { background:#dcfce7; color:var(--verde); }
+  .serv-estado-badge.gris     { background:#f1f5f9; color:var(--gris); }
+  .serv-datos { display:grid; grid-template-columns:1fr 1fr; gap:6px; font-size:12px; }
+  .serv-dato { display:flex; flex-direction:column; gap:1px; }
+  .serv-dato-label { color:var(--gris); font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:0.3px; }
+  .serv-dato-val { font-weight:700; color:#1e293b; font-size:13px; }
+  .serv-alerta-monto { margin-top:10px; background:#fef9c3; border-radius:8px; padding:8px 10px; font-size:12px; color:#92400e; font-weight:600; display:flex; align-items:center; gap:6px; }
+  .serv-mes-header { font-size:12px; font-weight:700; color:var(--gris); text-transform:uppercase; letter-spacing:0.5px; margin:16px 0 8px; padding-left:4px; }
+
+  /* HISTORIAL SERVICIOS */
+  .hist-serv-card { background:white; border-radius:var(--radio); padding:14px 16px; box-shadow:var(--sombra); margin-bottom:10px; }
+  .hist-serv-titulo { font-size:14px; font-weight:700; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center; }
+  .hist-row { display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-top:1px solid var(--borde); font-size:13px; }
+  .hist-row:first-of-type { border-top:none; }
+  .hist-mes { color:var(--gris); font-weight:600; }
+  .hist-monto { font-weight:700; }
+  .hist-monto.alto { color:var(--rojo); }
+  .hist-monto.normal { color:#1e293b; }
+  .hist-prom-line { margin-top:10px; padding-top:10px; border-top:2px dashed var(--borde); display:flex; justify-content:space-between; font-size:12px; color:var(--gris); }
 </style>
 </head>
 <body>
@@ -181,6 +219,7 @@
     <button class="tab activo" onclick="cambiarVista('conserje',this)">📦 Personal</button>
     <button class="tab" onclick="cambiarVista('tesorera',this)">📊 Directiva</button>
     <button class="tab" onclick="cambiarVista('activos',this)">🪑 Activos</button>
+    <button class="tab" onclick="cambiarVista('servicios',this)">💳 Pagos</button>
   </div>
 </div>
 
@@ -320,6 +359,86 @@
     <div id="sub-bajas" style="display:none"></div>
   </div>
 
+  <!-- PAGO SERVICIOS -->
+  <div id="vista-servicios" style="display:none">
+    <div class="subtabs">
+      <button class="subtab activo" onclick="cambiarSubtabServ('pendientes',this)">Pendientes</button>
+      <button class="subtab" onclick="cambiarSubtabServ('historial',this)">Historial</button>
+    </div>
+    <div id="sub-serv-pendientes"></div>
+    <div id="sub-serv-historial" style="display:none"></div>
+  </div>
+
+</div>
+
+<!-- MODAL REGISTRAR RECIBO -->
+<div id="modal-recibo" class="modal-overlay" style="display:none" onclick="cerrarModalReciboOverlay(event)">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-titulo">Registrar recibo</div>
+    <div class="modal-subtitulo">Ingresa los datos del recibo recibido</div>
+    <div class="input-group">
+      <label>Servicio</label>
+      <select id="mr-servicio" onchange="onServicioChange()">
+        <option value="luz">💡 Luz General</option>
+        <option value="luzcf">🔴 Luz Contraincendios</option>
+        <option value="agua">💧 Agua</option>
+        <option value="tlf">📞 Teléfono</option>
+        <option value="cafe">☕ Compra Cafetería</option>
+      </select>
+    </div>
+    <div class="input-group">
+      <label>Mes que corresponde</label>
+      <input type="month" id="mr-mes">
+    </div>
+    <div class="input-group">
+      <label>Monto (S/)</label>
+      <input type="number" id="mr-monto" placeholder="0.00" inputmode="decimal" step="0.01" oninput="verificarMontoAlerta()">
+    </div>
+    <div class="input-group" id="mr-grupo-vence">
+      <label>Fecha de vencimiento</label>
+      <input type="date" id="mr-vence">
+    </div>
+    <div class="input-group">
+      <label>Nº de recibo (opcional)</label>
+      <input type="text" id="mr-nro" placeholder="Ej: 00123456">
+    </div>
+    <div class="input-group">
+      <label>Registrado por</label>
+      <input type="text" id="mr-quien" placeholder="Nombre del personal">
+    </div>
+    <div id="mr-alerta-monto" style="display:none" class="serv-alerta-monto">⚠️ El monto supera el promedio habitual</div>
+    <div class="modal-botones">
+      <button class="btn btn-gris" onclick="cerrarModalRecibo()">Cancelar</button>
+      <button class="btn btn-primario" onclick="guardarRecibo()">Registrar recibo</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL CONFIRMAR PAGO -->
+<div id="modal-pago" class="modal-overlay" style="display:none" onclick="cerrarModalPagoOverlay(event)">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-titulo">Confirmar pago</div>
+    <div class="modal-subtitulo" id="mp-subtitulo"></div>
+    <input type="hidden" id="mp-id">
+    <div class="modal-stock-actual">
+      <span>Monto a pagar</span>
+      <strong id="mp-monto">S/ —</strong>
+    </div>
+    <div class="input-group">
+      <label>Fecha de pago</label>
+      <input type="date" id="mp-fecha">
+    </div>
+    <div class="input-group">
+      <label>Confirmado por</label>
+      <input type="text" id="mp-quien" placeholder="Nombre de quien confirma">
+    </div>
+    <div class="modal-botones">
+      <button class="btn btn-gris" onclick="cerrarModalPago()">Cancelar</button>
+      <button class="btn btn-verde" onclick="confirmarPago()">✅ Marcar como pagado</button>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -359,7 +478,7 @@ async function api(params) {
 // VISTAS
 // ============================================================
 function mostrarVista(v) {
-  ["config","conserje","tesorera","activos"].forEach(id =>
+  ["config","conserje","tesorera","activos","servicios"].forEach(id =>
     document.getElementById("vista-"+id).style.display = v===id ? "block" : "none"
   );
 }
@@ -372,6 +491,7 @@ function cambiarVista(v, btn) {
   if (v === "conserje") renderItems();
   if (v === "tesorera") cargarDirectiva();
   if (v === "activos")  cargarActivos();
+  if (v === "servicios") cargarServicios();
 }
 
 function cambiarSubtab(sub, btn) {
@@ -957,6 +1077,364 @@ function cerrarModalBajaOverlay(e) { if(e.target===document.getElementById("moda
 // ============================================================
 // UTILIDADES
 // ============================================================
+// ============================================================
+// PAGO DE SERVICIOS
+// ============================================================
+
+const SERV_CONFIG = {
+  luz:   { nombre:"Luz General",          emoji:"💡", clase:"luz",   umbral:0.15, tieneVence:true  },
+  luzcf: { nombre:"Luz Contraincendios",  emoji:"🔴", clase:"luzcf", umbral:0.15, tieneVence:true  },
+  agua:  { nombre:"Agua",                 emoji:"💧", clase:"agua",  umbral:0.15, tieneVence:true  },
+  tlf:   { nombre:"Teléfono",             emoji:"📞", clase:"tlf",   umbral:0.15, tieneVence:true  },
+  cafe:  { nombre:"Compra Cafetería",     emoji:"☕", clase:"cafe",  umbral:0.10, tieneVence:false }
+};
+
+let recibos = [];
+let subtabServActual = "pendientes";
+let reciboEditando = null;
+
+// --- Subtabs servicios ---
+function cambiarSubtabServ(sub, btn) {
+  document.querySelectorAll("#vista-servicios .subtab").forEach(t => t.classList.remove("activo"));
+  btn.classList.add("activo");
+  subtabServActual = sub;
+  document.getElementById("sub-serv-pendientes").style.display = sub==="pendientes" ? "block" : "none";
+  document.getElementById("sub-serv-historial").style.display  = sub==="historial"  ? "block" : "none";
+  if (sub==="pendientes") renderPendientes();
+  else renderHistorialServ();
+}
+
+// --- Cargar datos ---
+async function cargarServicios() {
+  document.getElementById("sub-serv-pendientes").innerHTML = '<div class="loader"><div class="spinner"></div><span>Cargando...</span></div>';
+  try {
+    const data = await api({ accion: "getServicios" });
+    if (!data.ok) throw new Error(data.error);
+    recibos = data.recibos || [];
+    if (subtabServActual === "pendientes") renderPendientes();
+    else renderHistorialServ();
+  } catch(e) {
+    document.getElementById("sub-serv-pendientes").innerHTML = `<div class="vacio"><div class="vacio-icono">⚠️</div>${e.message}</div>`;
+  }
+}
+
+// --- Utilidades de fecha ---
+function diasParaVencer(fechaStr) {
+  if (!fechaStr) return null;
+  const partes = fechaStr.toString().split("/");
+  let fecha;
+  if (partes.length === 3) {
+    fecha = new Date(parseInt(partes[2]), parseInt(partes[1])-1, parseInt(partes[0]));
+  } else {
+    fecha = new Date(fechaStr);
+  }
+  const hoy = new Date(); hoy.setHours(0,0,0,0);
+  return Math.round((fecha - hoy) / (1000*60*60*24));
+}
+
+function fmtFecha(str) {
+  if (!str) return "—";
+  return str.toString();
+}
+
+function fmtMes(mesStr) {
+  if (!mesStr) return "—";
+  const [y,m] = mesStr.split("-");
+  const meses = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Set","Oct","Nov","Dic"];
+  return meses[parseInt(m)-1] + " " + y;
+}
+
+// --- Calcular promedio de últimos 6 recibos del mismo servicio ---
+function calcularPromedio(servicio, excluirId) {
+  const historial = recibos
+    .filter(r => r.servicio === servicio && r.id !== excluirId && r.monto)
+    .sort((a,b) => (b.mes||"").localeCompare(a.mes||""))
+    .slice(0, 6);
+  if (!historial.length) return null;
+  const suma = historial.reduce((s,r) => s + Number(r.monto), 0);
+  return Math.round((suma / historial.length) * 100) / 100;
+}
+
+// --- Determinar clase y estado de alerta ---
+function estadoRecibo(r) {
+  if (r.pagado) return { cls:"s-verde", badge:"verde", texto:"Pagado" };
+  const cfg = SERV_CONFIG[r.servicio];
+  if (cfg && !cfg.tieneVence) {
+    // Cafetería: vence 10 días desde registro
+    const dias = diasParaVencer(r.fechaVence);
+    if (dias === null) return { cls:"s-gris", badge:"gris", texto:"Sin fecha" };
+    if (dias < 0)  return { cls:"s-rojo",    badge:"rojo",     texto:"Vencido" };
+    if (dias <= 3) return { cls:"s-rojo",    badge:"rojo",     texto:`Vence en ${dias}d` };
+    if (dias <= 7) return { cls:"s-amarillo", badge:"amarillo", texto:`Vence en ${dias}d` };
+    return { cls:"s-gris", badge:"gris", texto:`Vence en ${dias}d` };
+  }
+  const dias = diasParaVencer(r.fechaVence);
+  if (dias === null) return { cls:"s-gris", badge:"gris", texto:"Sin fecha" };
+  if (dias < 0)  return { cls:"s-rojo",    badge:"rojo",     texto:"Vencido" };
+  if (dias <= 3) return { cls:"s-rojo",    badge:"rojo",     texto:`Vence en ${dias}d` };
+  if (dias <= 7) return { cls:"s-amarillo", badge:"amarillo", texto:`Vence en ${dias}d` };
+  return { cls:"s-gris", badge:"gris", texto:`Vence en ${dias}d` };
+}
+
+// --- Render pendientes ---
+function renderPendientes() {
+  const el = document.getElementById("sub-serv-pendientes");
+
+  // Agrupar: urgentes (rojo), próximos (amarillo), pendientes (gris), pagados
+  const urgentes  = [];
+  const proximos  = [];
+  const pendientes= [];
+  const pagados   = [];
+
+  // Tomar solo el recibo más reciente por servicio+mes que no esté pagado, y los pagados del mes actual
+  const hoy = new Date();
+  const mesActual = hoy.getFullYear()+"-"+String(hoy.getMonth()+1).padStart(2,"0");
+
+  recibos.forEach(r => {
+    const est = estadoRecibo(r);
+    const prom = calcularPromedio(r.servicio, r.id);
+    const cfg = SERV_CONFIG[r.servicio] || {};
+    const montoAlto = prom && Number(r.monto) > prom * (1 + (cfg.umbral||0.15));
+    r._estado = est;
+    r._prom = prom;
+    r._montoAlto = montoAlto;
+
+    if (r.pagado) { pagados.push(r); return; }
+    if (est.badge === "rojo")     urgentes.push(r);
+    else if (est.badge === "amarillo") proximos.push(r);
+    else pendientes.push(r);
+  });
+
+  const renderCard = r => {
+    const cfg = SERV_CONFIG[r.servicio] || { nombre:r.servicio, emoji:"📄", clase:"" };
+    const est = r._estado;
+    return `<div class="serv-card ${est.cls}" onclick="abrirPago(${r.id})">
+      <div class="serv-head">
+        <div class="serv-icono ${cfg.clase}">${cfg.emoji}</div>
+        <div class="serv-nombre">${cfg.nombre}</div>
+        <span class="serv-estado-badge ${est.badge}">${est.texto}</span>
+      </div>
+      <div class="serv-datos">
+        <div class="serv-dato"><span class="serv-dato-label">Mes</span><span class="serv-dato-val">${fmtMes(r.mes)}</span></div>
+        <div class="serv-dato"><span class="serv-dato-label">Monto</span><span class="serv-dato-val">S/ ${Number(r.monto).toFixed(2)}</span></div>
+        <div class="serv-dato"><span class="serv-dato-label">Vence</span><span class="serv-dato-val">${fmtFecha(r.fechaVence)}</span></div>
+        <div class="serv-dato"><span class="serv-dato-label">Promedio</span><span class="serv-dato-val">${r._prom ? "S/ "+r._prom.toFixed(2) : "—"}</span></div>
+      </div>
+      ${r._montoAlto ? `<div class="serv-alerta-monto">⚠️ Monto inusual — S/ ${Number(r.monto).toFixed(2)} vs promedio S/ ${r._prom.toFixed(2)}</div>` : ""}
+    </div>`;
+  };
+
+  let html = `
+    <div class="seccion-header">
+      <span class="seccion-titulo">Pago de Servicios</span>
+      <button class="btn-sm btn-primario" onclick="abrirModalRecibo()">＋ Nuevo recibo</button>
+    </div>`;
+
+  if (!recibos.length) {
+    html += '<div class="vacio"><div class="vacio-icono">💳</div>No hay recibos registrados.<br>Presiona "+ Nuevo recibo" para comenzar.</div>';
+    el.innerHTML = html; return;
+  }
+
+  if (urgentes.length) {
+    html += `<div class="serv-mes-header">🔴 Urgente — ${urgentes.length} recibo(s)</div>`;
+    html += urgentes.map(renderCard).join("");
+  }
+  if (proximos.length) {
+    html += `<div class="serv-mes-header">🟡 Próximos a vencer</div>`;
+    html += proximos.map(renderCard).join("");
+  }
+  if (pendientes.length) {
+    html += `<div class="serv-mes-header">⏳ Pendientes de pago</div>`;
+    html += pendientes.map(renderCard).join("");
+  }
+  if (pagados.length) {
+    html += `<div class="serv-mes-header">✅ Pagados recientemente</div>`;
+    html += pagados.slice(0,5).map(r => {
+      const cfg = SERV_CONFIG[r.servicio] || { nombre:r.servicio, emoji:"📄", clase:"" };
+      return `<div class="serv-card s-verde" style="opacity:0.75">
+        <div class="serv-head">
+          <div class="serv-icono ${cfg.clase}">${cfg.emoji}</div>
+          <div class="serv-nombre">${cfg.nombre}</div>
+          <span class="serv-estado-badge verde">Pagado</span>
+        </div>
+        <div class="serv-datos">
+          <div class="serv-dato"><span class="serv-dato-label">Mes</span><span class="serv-dato-val">${fmtMes(r.mes)}</span></div>
+          <div class="serv-dato"><span class="serv-dato-label">Monto</span><span class="serv-dato-val">S/ ${Number(r.monto).toFixed(2)}</span></div>
+          <div class="serv-dato"><span class="serv-dato-label">Pagado el</span><span class="serv-dato-val">${fmtFecha(r.fechaPago)}</span></div>
+          <div class="serv-dato"><span class="serv-dato-label">Confirmó</span><span class="serv-dato-val">${r.pagadoPor||"—"}</span></div>
+        </div>
+      </div>`;
+    }).join("");
+  }
+
+  el.innerHTML = html;
+}
+
+// --- Render historial ---
+function renderHistorialServ() {
+  const el = document.getElementById("sub-serv-historial");
+  if (!recibos.length) { el.innerHTML='<div class="vacio"><div class="vacio-icono">📋</div>Sin historial aún</div>'; return; }
+
+  const porServicio = {};
+  recibos.forEach(r => {
+    if (!porServicio[r.servicio]) porServicio[r.servicio] = [];
+    porServicio[r.servicio].push(r);
+  });
+
+  const orden = ["luz","luzcf","agua","tlf","cafe"];
+  let html = "";
+
+  orden.forEach(srv => {
+    const lista = (porServicio[srv]||[]).sort((a,b) => (b.mes||"").localeCompare(a.mes||""));
+    if (!lista.length) return;
+    const cfg = SERV_CONFIG[srv];
+    const montos = lista.filter(r=>r.monto).map(r=>Number(r.monto));
+    const prom = montos.length ? (montos.reduce((s,m)=>s+m,0)/montos.length) : 0;
+    const max  = montos.length ? Math.max(...montos) : 0;
+    const min  = montos.length ? Math.min(...montos) : 0;
+
+    html += `<div class="hist-serv-card">
+      <div class="hist-serv-titulo">
+        <span>${cfg.emoji} ${cfg.nombre}</span>
+        <span style="font-size:12px;color:var(--gris)">${lista.length} recibos</span>
+      </div>
+      ${lista.slice(0,8).map(r => {
+        const alto = prom && Number(r.monto) > prom * (1 + cfg.umbral);
+        return `<div class="hist-row">
+          <span class="hist-mes">${fmtMes(r.mes)}</span>
+          <span style="font-size:11px;color:var(--gris);flex:1;padding:0 8px">${r.pagado?"✅ Pagado":"⏳ Pend."}</span>
+          <span class="hist-monto ${alto?"alto":"normal"}">
+            S/ ${Number(r.monto).toFixed(2)}
+            ${alto?'<span style="font-size:10px;color:var(--rojo)"> ⚠️</span>':""}
+          </span>
+        </div>`;
+      }).join("")}
+      <div class="hist-prom-line">
+        <span>Promedio: <strong>S/ ${prom.toFixed(2)}</strong></span>
+        <span>Mín: S/ ${min.toFixed(2)}</span>
+        <span>Máx: S/ ${max.toFixed(2)}</span>
+      </div>
+    </div>`;
+  });
+
+  el.innerHTML = html || '<div class="vacio"><div class="vacio-icono">📋</div>Sin datos</div>';
+}
+
+// --- Modal nuevo recibo ---
+function abrirModalRecibo() {
+  reciboEditando = null;
+  const hoy = new Date();
+  const mesActual = hoy.getFullYear()+"-"+String(hoy.getMonth()+1).padStart(2,"0");
+  document.getElementById("mr-mes").value = mesActual;
+  document.getElementById("mr-monto").value = "";
+  document.getElementById("mr-nro").value = "";
+  document.getElementById("mr-quien").value = "";
+  document.getElementById("mr-vence").value = "";
+  document.getElementById("mr-alerta-monto").style.display = "none";
+  document.getElementById("mr-servicio").value = "luz";
+  onServicioChange();
+  document.getElementById("modal-recibo").style.display = "flex";
+}
+
+function onServicioChange() {
+  const srv = document.getElementById("mr-servicio").value;
+  const cfg = SERV_CONFIG[srv];
+  const grupoVence = document.getElementById("mr-grupo-vence");
+  if (!cfg.tieneVence) {
+    // Cafetería: calcular fecha automáticamente
+    const hoy = new Date();
+    hoy.setDate(hoy.getDate() + 10);
+    document.getElementById("mr-vence").value = hoy.toISOString().split("T")[0];
+    grupoVence.querySelector("label").textContent = "Fecha de pago (10 días desde hoy)";
+    grupoVence.querySelector("input").readOnly = true;
+    grupoVence.querySelector("input").style.background = "var(--gris-claro)";
+  } else {
+    grupoVence.querySelector("label").textContent = "Fecha de vencimiento";
+    grupoVence.querySelector("input").readOnly = false;
+    grupoVence.querySelector("input").style.background = "white";
+  }
+  verificarMontoAlerta();
+}
+
+function verificarMontoAlerta() {
+  const srv = document.getElementById("mr-servicio").value;
+  const monto = parseFloat(document.getElementById("mr-monto").value);
+  const alertaEl = document.getElementById("mr-alerta-monto");
+  if (!monto || !srv) { alertaEl.style.display="none"; return; }
+  const prom = calcularPromedio(srv, null);
+  const cfg = SERV_CONFIG[srv];
+  if (prom && monto > prom * (1 + cfg.umbral)) {
+    alertaEl.textContent = `⚠️ Monto inusual: S/ ${monto.toFixed(2)} supera el promedio S/ ${prom.toFixed(2)} en más del ${cfg.umbral*100}%`;
+    alertaEl.style.display = "flex";
+  } else {
+    alertaEl.style.display = "none";
+  }
+}
+
+function cerrarModalRecibo() { document.getElementById("modal-recibo").style.display="none"; }
+function cerrarModalReciboOverlay(e) { if(e.target===document.getElementById("modal-recibo")) cerrarModalRecibo(); }
+
+async function guardarRecibo() {
+  const servicio = document.getElementById("mr-servicio").value;
+  const mes      = document.getElementById("mr-mes").value;
+  const monto    = document.getElementById("mr-monto").value;
+  const vence    = document.getElementById("mr-vence").value;
+  const nro      = document.getElementById("mr-nro").value;
+  const quien    = document.getElementById("mr-quien").value;
+
+  if (!servicio||!mes||!monto) { mostrarNotif("⚠️ Servicio, mes y monto son obligatorios"); return; }
+  if (!vence) { mostrarNotif("⚠️ Ingresa la fecha de vencimiento"); return; }
+
+  // Convertir fecha de vence a formato dd/mm/yyyy para consistencia con el resto
+  const [vy,vm,vd] = vence.split("-");
+  const fechaVenceFmt = `${vd}/${vm}/${vy}`;
+
+  try {
+    const data = await api({
+      accion: "addRecibo", servicio, mes, monto, fechaVence: fechaVenceFmt,
+      nroRecibo: nro, registradoPor: quien
+    });
+    if (!data.ok) throw new Error(data.error);
+    cerrarModalRecibo();
+    await cargarServicios();
+    mostrarNotif("✅ Recibo registrado correctamente");
+  } catch(e) { mostrarNotif("❌ "+e.message); }
+}
+
+// --- Modal confirmar pago ---
+function abrirPago(id) {
+  const r = recibos.find(x => x.id === id);
+  if (!r) return;
+  if (r.pagado) { mostrarNotif("Este recibo ya está pagado"); return; }
+  const cfg = SERV_CONFIG[r.servicio] || { nombre: r.servicio };
+  document.getElementById("mp-id").value = id;
+  document.getElementById("mp-subtitulo").textContent = cfg.nombre + " · " + fmtMes(r.mes);
+  document.getElementById("mp-monto").textContent = "S/ " + Number(r.monto).toFixed(2);
+  document.getElementById("mp-fecha").value = new Date().toISOString().split("T")[0];
+  document.getElementById("mp-quien").value = "";
+  document.getElementById("modal-pago").style.display = "flex";
+}
+
+function cerrarModalPago() { document.getElementById("modal-pago").style.display="none"; }
+function cerrarModalPagoOverlay(e) { if(e.target===document.getElementById("modal-pago")) cerrarModalPago(); }
+
+async function confirmarPago() {
+  const id    = document.getElementById("mp-id").value;
+  const fecha = document.getElementById("mp-fecha").value;
+  const quien = document.getElementById("mp-quien").value.trim();
+  if (!fecha) { mostrarNotif("⚠️ Ingresa la fecha de pago"); return; }
+  if (!quien) { mostrarNotif("⚠️ Ingresa quién confirma el pago"); return; }
+  const [py,pm,pd] = fecha.split("-");
+  const fechaPagoFmt = `${pd}/${pm}/${py}`;
+  try {
+    const data = await api({ accion:"pagarRecibo", id, fechaPago: fechaPagoFmt, pagadoPor: quien });
+    if (!data.ok) throw new Error(data.error);
+    cerrarModalPago();
+    await cargarServicios();
+    mostrarNotif("✅ Pago confirmado correctamente");
+  } catch(e) { mostrarNotif("❌ "+e.message); }
+}
+
 function mostrarNotif(msg) {
   const el = document.getElementById("notif");
   el.textContent = msg; el.style.display = "block";
