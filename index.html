@@ -441,6 +441,46 @@
   </div>
 </div>
 
+<!-- MODAL EDITAR RECIBO -->
+<div id="modal-editar-recibo" class="modal-overlay" style="display:none" onclick="cerrarModalEditarReciboOverlay(event)">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-titulo">Editar recibo</div>
+    <div class="modal-subtitulo">Corrige los datos del recibo</div>
+    <input type="hidden" id="me-fila">
+    <div class="input-group">
+      <label>Servicio</label>
+      <select id="me-servicio">
+        <option value="luz">💡 Luz General</option>
+        <option value="luzcf">🔴 Luz Contraincendios</option>
+        <option value="agua">💧 Agua</option>
+        <option value="tlf">📞 Teléfono</option>
+        <option value="cafe">☕ Compra Cafetería</option>
+      </select>
+    </div>
+    <div class="input-group">
+      <label>Mes que corresponde</label>
+      <input type="month" id="me-mes">
+    </div>
+    <div class="input-group">
+      <label>Monto (S/)</label>
+      <input type="number" id="me-monto" placeholder="0.00" inputmode="decimal" step="0.01">
+    </div>
+    <div class="input-group">
+      <label>Fecha de vencimiento</label>
+      <input type="date" id="me-vence">
+    </div>
+    <div class="input-group">
+      <label>Nº de recibo (opcional)</label>
+      <input type="text" id="me-nro" placeholder="Ej: 00123456">
+    </div>
+    <div class="modal-botones">
+      <button class="btn btn-gris" onclick="cerrarModalEditarRecibo()">Cancelar</button>
+      <button class="btn btn-primario" onclick="guardarEdicionRecibo()">Guardar cambios</button>
+    </div>
+  </div>
+</div>
+
 <script>
 let API_URL = "";
 let items = [];
@@ -616,11 +656,24 @@ function abrirMovimiento(tipo) {
 function cerrarModal() { document.getElementById("modal").style.display="none"; itemActual=null; tipoMovActual=null; }
 function cerrarModalOverlay(e) { if(e.target===document.getElementById("modal")) cerrarModal(); }
 
+// Utilidad anti-doble tap: bloquea el botón mientras procesa
+function btnGuardando(selectorOelem, guardando, textoOriginal) {
+  const el = typeof selectorOelem === "string" ? document.querySelector(selectorOelem) : selectorOelem;
+  if (!el) return;
+  el.disabled = guardando;
+  el.style.opacity = guardando ? "0.6" : "1";
+  if (guardando) { el._textoOrig = el.textContent; el.textContent = "Guardando..."; }
+  else if (textoOriginal) el.textContent = textoOriginal;
+  else if (el._textoOrig) el.textContent = el._textoOrig;
+}
+
 async function confirmarMovimiento() {
   const cantidad = parseInt(document.getElementById("modal-cantidad").value);
   const nota = document.getElementById("modal-nota").value.trim();
   if (!cantidad||cantidad<=0) { mostrarNotif("⚠️ Ingresa una cantidad válida"); return; }
   if (!tipoMovActual) return;
+  const botones = document.querySelectorAll("#modal-botones .btn");
+  botones.forEach(b => { b.disabled=true; b.style.opacity="0.6"; });
   try {
     const data = await api({ accion: tipoMovActual==="ENTRADA"?"entrada":"salida", itemId: itemActual.id, cantidad, nota, registradoPor:"Personal" });
     if (!data.ok) throw new Error(data.error);
@@ -629,7 +682,10 @@ async function confirmarMovimiento() {
     cerrarModal();
     renderItems();
     mostrarNotif(tipoMovActual==="ENTRADA" ? `✅ Entrada registrada · Stock: ${data.stockNuevo}` : `✅ Salida registrada · Stock: ${data.stockNuevo}`);
-  } catch(e) { mostrarNotif("❌ "+e.message); }
+  } catch(e) {
+    botones.forEach(b => { b.disabled=false; b.style.opacity="1"; });
+    mostrarNotif("❌ "+e.message);
+  }
 }
 
 // ============================================================
@@ -1034,13 +1090,18 @@ async function guardarMueble() {
     observaciones: document.getElementById("mm-obs").value,
   };
   const id = document.getElementById("mm-id").value;
+  const botones = document.querySelectorAll("#modal-mueble .modal-botones .btn");
+  botones.forEach(b => { b.disabled=true; b.style.opacity="0.6"; });
   try {
     const data = await api(id ? {...params, accion:"updateMueble", id} : {...params, accion:"addMueble"});
     if (!data.ok) throw new Error(data.error);
     cerrarModalMueble();
     await cargarActivos();
     mostrarNotif(id ? "✅ Activo actualizado" : "✅ Activo registrado");
-  } catch(e) { mostrarNotif("❌ "+e.message); }
+  } catch(e) {
+    botones.forEach(b => { b.disabled=false; b.style.opacity="1"; });
+    mostrarNotif("❌ "+e.message);
+  }
 }
 
 function cerrarModalMueble() { document.getElementById("modal-mueble").style.display="none"; muebleActual=null; }
@@ -1062,13 +1123,18 @@ async function confirmarBaja() {
   const fechaBaja = document.getElementById("mb-fecha").value;
   const motivoBaja = document.getElementById("mb-motivo").value;
   const obs = document.getElementById("mb-obs").value;
+  const botones = document.querySelectorAll("#modal-baja .modal-botones .btn");
+  botones.forEach(b => { b.disabled=true; b.style.opacity="0.6"; });
   try {
     const data = await api({accion:"bajaMueble", id, fechaBaja, motivoBaja, observaciones:obs});
     if (!data.ok) throw new Error(data.error);
     cerrarModalBaja();
     await cargarActivos();
     mostrarNotif("✅ Baja registrada correctamente");
-  } catch(e) { mostrarNotif("❌ "+e.message); }
+  } catch(e) {
+    botones.forEach(b => { b.disabled=false; b.style.opacity="1"; });
+    mostrarNotif("❌ "+e.message);
+  }
 }
 
 function cerrarModalBaja() { document.getElementById("modal-baja").style.display="none"; }
@@ -1208,7 +1274,7 @@ function renderPendientes() {
   const renderCard = r => {
     const cfg = SERV_CONFIG[r.servicio] || { nombre:r.servicio, emoji:"📄", clase:"" };
     const est = r._estado;
-    return `<div class="serv-card ${est.cls}" onclick="abrirPago(${r.id})">
+    return `<div class="serv-card ${est.cls}">
       <div class="serv-head">
         <div class="serv-icono ${cfg.clase}">${cfg.emoji}</div>
         <div class="serv-nombre">${cfg.nombre}</div>
@@ -1221,6 +1287,11 @@ function renderPendientes() {
         <div class="serv-dato"><span class="serv-dato-label">Promedio</span><span class="serv-dato-val">${r._prom ? "S/ "+r._prom.toFixed(2) : "—"}</span></div>
       </div>
       ${r._montoAlto ? `<div class="serv-alerta-monto">⚠️ Monto inusual — S/ ${Number(r.monto).toFixed(2)} vs promedio S/ ${r._prom.toFixed(2)}</div>` : ""}
+      <div style="display:flex;gap:8px;margin-top:12px">
+        <button class="btn btn-verde" style="flex:2;padding:10px;font-size:13px" onclick="abrirPago(${r.fila})">✅ Marcar pagado</button>
+        <button class="btn-sm" style="flex:1;background:#dbeafe;color:var(--azul2);justify-content:center" onclick="abrirEditarRecibo(${r.fila})">✏️ Editar</button>
+        <button class="btn-sm" style="flex:1;background:#fee2e2;color:var(--rojo);justify-content:center" onclick="eliminarRecibo(${r.fila})">🗑️ Borrar</button>
+      </div>
     </div>`;
   };
 
@@ -1251,7 +1322,7 @@ function renderPendientes() {
     html += `<div class="serv-mes-header">✅ Pagados recientemente</div>`;
     html += pagados.slice(0,5).map(r => {
       const cfg = SERV_CONFIG[r.servicio] || { nombre:r.servicio, emoji:"📄", clase:"" };
-      return `<div class="serv-card s-verde" style="opacity:0.75">
+      return `<div class="serv-card s-verde" style="opacity:0.85">
         <div class="serv-head">
           <div class="serv-icono ${cfg.clase}">${cfg.emoji}</div>
           <div class="serv-nombre">${cfg.nombre}</div>
@@ -1262,6 +1333,10 @@ function renderPendientes() {
           <div class="serv-dato"><span class="serv-dato-label">Monto</span><span class="serv-dato-val">S/ ${Number(r.monto).toFixed(2)}</span></div>
           <div class="serv-dato"><span class="serv-dato-label">Pagado el</span><span class="serv-dato-val">${fmtFecha(r.fechaPago)}</span></div>
           <div class="serv-dato"><span class="serv-dato-label">Confirmó</span><span class="serv-dato-val">${r.pagadoPor||"—"}</span></div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:12px">
+          <button class="btn-sm" style="flex:1;background:#dbeafe;color:var(--azul2);justify-content:center" onclick="abrirEditarRecibo(${r.fila})">✏️ Editar</button>
+          <button class="btn-sm" style="flex:1;background:#fee2e2;color:var(--rojo);justify-content:center" onclick="eliminarRecibo(${r.fila})">🗑️ Borrar</button>
         </div>
       </div>`;
     }).join("");
@@ -1385,10 +1460,11 @@ async function guardarRecibo() {
   if (!servicio||!mes||!monto) { mostrarNotif("⚠️ Servicio, mes y monto son obligatorios"); return; }
   if (!vence) { mostrarNotif("⚠️ Ingresa la fecha de vencimiento"); return; }
 
-  // Convertir fecha de vence a formato dd/mm/yyyy para consistencia con el resto
   const [vy,vm,vd] = vence.split("-");
   const fechaVenceFmt = `${vd}/${vm}/${vy}`;
 
+  const botones = document.querySelectorAll("#modal-recibo .modal-botones .btn");
+  botones.forEach(b => { b.disabled=true; b.style.opacity="0.6"; });
   try {
     const data = await api({
       accion: "addRecibo", servicio, mes, monto, fechaVence: fechaVenceFmt,
@@ -1398,16 +1474,19 @@ async function guardarRecibo() {
     cerrarModalRecibo();
     await cargarServicios();
     mostrarNotif("✅ Recibo registrado correctamente");
-  } catch(e) { mostrarNotif("❌ "+e.message); }
+  } catch(e) {
+    botones.forEach(b => { b.disabled=false; b.style.opacity="1"; });
+    mostrarNotif("❌ "+e.message);
+  }
 }
 
 // --- Modal confirmar pago ---
-function abrirPago(id) {
-  const r = recibos.find(x => x.id === id);
+function abrirPago(fila) {
+  const r = recibos.find(x => x.fila === fila);
   if (!r) return;
   if (r.pagado) { mostrarNotif("Este recibo ya está pagado"); return; }
   const cfg = SERV_CONFIG[r.servicio] || { nombre: r.servicio };
-  document.getElementById("mp-id").value = id;
+  document.getElementById("mp-id").value = fila;
   document.getElementById("mp-subtitulo").textContent = cfg.nombre + " · " + fmtMes(r.mes);
   document.getElementById("mp-monto").textContent = "S/ " + Number(r.monto).toFixed(2);
   document.getElementById("mp-fecha").value = new Date().toISOString().split("T")[0];
@@ -1419,19 +1498,85 @@ function cerrarModalPago() { document.getElementById("modal-pago").style.display
 function cerrarModalPagoOverlay(e) { if(e.target===document.getElementById("modal-pago")) cerrarModalPago(); }
 
 async function confirmarPago() {
-  const id    = document.getElementById("mp-id").value;
+  const fila  = document.getElementById("mp-id").value;
   const fecha = document.getElementById("mp-fecha").value;
   const quien = document.getElementById("mp-quien").value.trim();
   if (!fecha) { mostrarNotif("⚠️ Ingresa la fecha de pago"); return; }
   if (!quien) { mostrarNotif("⚠️ Ingresa quién confirma el pago"); return; }
   const [py,pm,pd] = fecha.split("-");
   const fechaPagoFmt = `${pd}/${pm}/${py}`;
+  const botones = document.querySelectorAll("#modal-pago .modal-botones .btn");
+  botones.forEach(b => { b.disabled=true; b.style.opacity="0.6"; });
   try {
-    const data = await api({ accion:"pagarRecibo", id, fechaPago: fechaPagoFmt, pagadoPor: quien });
+    const data = await api({ accion:"pagarRecibo", fila, fechaPago: fechaPagoFmt, pagadoPor: quien });
     if (!data.ok) throw new Error(data.error);
     cerrarModalPago();
     await cargarServicios();
     mostrarNotif("✅ Pago confirmado correctamente");
+  } catch(e) {
+    botones.forEach(b => { b.disabled=false; b.style.opacity="1"; });
+    mostrarNotif("❌ "+e.message);
+  }
+}
+
+// --- Editar recibo ---
+function abrirEditarRecibo(fila) {
+  const r = recibos.find(x => x.fila === fila);
+  if (!r) return;
+  document.getElementById("me-fila").value = fila;
+  document.getElementById("me-servicio").value = r.servicio;
+  document.getElementById("me-mes").value = r.mes;
+  document.getElementById("me-monto").value = r.monto;
+  // Convertir fecha dd/mm/yyyy a yyyy-mm-dd para el input date
+  const partes = (r.fechaVence||"").toString().split("/");
+  if (partes.length === 3) {
+    document.getElementById("me-vence").value = `${partes[2]}-${partes[1].padStart(2,"0")}-${partes[0].padStart(2,"0")}`;
+  } else {
+    document.getElementById("me-vence").value = "";
+  }
+  document.getElementById("me-nro").value = r.nroRecibo || "";
+  document.getElementById("modal-editar-recibo").style.display = "flex";
+}
+
+function cerrarModalEditarRecibo() { document.getElementById("modal-editar-recibo").style.display="none"; }
+function cerrarModalEditarReciboOverlay(e) { if(e.target===document.getElementById("modal-editar-recibo")) cerrarModalEditarRecibo(); }
+
+async function guardarEdicionRecibo() {
+  const fila   = document.getElementById("me-fila").value;
+  const servicio = document.getElementById("me-servicio").value;
+  const mes    = document.getElementById("me-mes").value;
+  const monto  = document.getElementById("me-monto").value;
+  const vence  = document.getElementById("me-vence").value;
+  const nro    = document.getElementById("me-nro").value;
+  if (!monto) { mostrarNotif("⚠️ El monto es obligatorio"); return; }
+  const [vy,vm,vd] = (vence||"--").split("-");
+  const fechaVenceFmt = vd ? `${vd}/${vm}/${vy}` : "";
+  const botones = document.querySelectorAll("#modal-editar-recibo .modal-botones .btn");
+  botones.forEach(b => { b.disabled=true; b.style.opacity="0.6"; });
+  try {
+    const data = await api({ accion:"editarRecibo", fila, servicio, mes, monto, fechaVence: fechaVenceFmt, nroRecibo: nro });
+    if (!data.ok) throw new Error(data.error);
+    cerrarModalEditarRecibo();
+    await cargarServicios();
+    mostrarNotif("✅ Recibo actualizado");
+  } catch(e) {
+    botones.forEach(b => { b.disabled=false; b.style.opacity="1"; });
+    mostrarNotif("❌ "+e.message);
+  }
+}
+
+// --- Eliminar recibo ---
+async function eliminarRecibo(fila) {
+  const r = recibos.find(x => x.fila === fila);
+  if (!r) return;
+  const cfg = SERV_CONFIG[r.servicio] || { nombre: r.servicio };
+  const confirma = confirm(`¿Eliminar recibo de ${cfg.nombre} — ${fmtMes(r.mes)}?\n\nEsta acción no se puede deshacer.`);
+  if (!confirma) return;
+  try {
+    const data = await api({ accion:"eliminarRecibo", fila });
+    if (!data.ok) throw new Error(data.error);
+    await cargarServicios();
+    mostrarNotif("✅ Recibo eliminado");
   } catch(e) { mostrarNotif("❌ "+e.message); }
 }
 
