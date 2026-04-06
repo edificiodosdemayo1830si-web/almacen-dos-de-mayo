@@ -82,14 +82,18 @@
   .kpi-ok   { color:var(--verde); }
 
   /* CONTROL */
-  .control-card { background:white; border-radius:var(--radio); box-shadow:var(--sombra); margin-bottom:10px; overflow:hidden; }
+  .control-btns-top { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px; }
+  .control-btn-rol { padding:16px 10px; border:1.5px solid var(--borde); border-radius:12px; background:white; font-size:13px; font-weight:700; cursor:pointer; font-family:var(--font); color:var(--azul); text-align:center; box-shadow:var(--sombra); }
+  .control-btn-rol:active { transform:scale(0.97); }
+  .control-filtros { display:flex; gap:6px; margin-bottom:12px; }
+  .control-card { background:white; border-radius:var(--radio); box-shadow:var(--sombra); margin-bottom:8px; overflow:hidden; }
   .control-header { padding:10px 14px; border-bottom:1px solid var(--gris-claro); display:flex; justify-content:space-between; align-items:center; }
-  .control-semana { font-size:13px; font-weight:700; }
-  .control-body { padding:10px 14px 12px; display:grid; grid-template-columns:1fr 1fr; gap:10px; }
-  .control-rol { font-size:10px; font-weight:600; color:#94a3b8; text-transform:uppercase; margin-bottom:3px; }
-  .control-ok   { font-size:12px; font-weight:600; color:var(--verde); }
-  .control-pend { font-size:12px; color:var(--gris); font-style:italic; }
-  .control-btns { padding:8px 14px 12px; display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .control-fecha { font-size:13px; font-weight:700; color:#1e293b; }
+  .control-body { padding:10px 14px 12px; }
+  .control-nombre { font-size:14px; font-weight:700; color:#1e293b; margin-bottom:3px; }
+  .control-obs { font-size:12px; color:var(--gris); margin-top:4px; }
+  .badge-personal { background:#dbeafe; color:#1d4ed8; }
+  .badge-directiva { background:#f3e8ff; color:#6b21a8; }
 
   /* FAB */
   .fab { position:fixed; bottom:20px; right:20px; width:54px; height:54px; background:var(--azul); color:white; border:none; border-radius:50%; font-size:28px; cursor:pointer; box-shadow:0 4px 14px rgba(26,58,92,0.4); font-family:var(--font); display:flex; align-items:center; justify-content:center; z-index:90; transition:transform 0.15s; }
@@ -164,6 +168,15 @@
 
 <!-- VISTA CONTROL -->
 <div id="vista-control" class="contenido" style="display:none">
+  <div class="control-btns-top">
+    <button class="control-btn-rol" onclick="abrirControlForm('Personal / Lobby')">&#128100; Personal /<br>Lobby</button>
+    <button class="control-btn-rol" onclick="abrirControlForm('Junta Directiva')">&#127963; Junta<br>Directiva</button>
+  </div>
+  <div class="control-filtros">
+    <button class="sf activo" id="cf-todos" onclick="filtrarControl('Todos')">Todos</button>
+    <button class="sf" id="cf-personal" onclick="filtrarControl('Personal / Lobby')">Personal</button>
+    <button class="sf" id="cf-directiva" onclick="filtrarControl('Junta Directiva')">Directiva</button>
+  </div>
   <div id="control-area"><div class="loading">Cargando...</div></div>
 </div>
 
@@ -379,52 +392,88 @@ function renderPlanAnual(plan) {
 }
 
 // ============================================================
-// CONTROL SEMANAL
+// CONTROL
 // ============================================================
+let controlFiltroActivo = 'Todos';
+let controlDataCache = [];
+
 async function cargarControl() {
-  document.getElementById('control-area').innerHTML = '<div class="loading">Cargando control...</div>';
+  document.getElementById('control-area').innerHTML = '<div class="loading">Cargando...</div>';
   try {
-    const res = await api({accion:'obtenerControl'});
-    renderControl(res.semanas || []);
+    const res = await api({accion:'obtenerControl', rol: null});
+    controlDataCache = res.registros || [];
+    renderControl(controlDataCache);
   } catch(e) {
-    document.getElementById('control-area').innerHTML = '<div class="empty">Error al cargar el control.</div>';
+    document.getElementById('control-area').innerHTML = '<div class="empty">Error al cargar.</div>';
   }
 }
 
-function renderControl(semanas) {
-  if(!semanas.length) {
-    document.getElementById('control-area').innerHTML = '<div class="empty">No hay semanas registradas aún.</div>';
+function filtrarControl(filtro) {
+  controlFiltroActivo = filtro;
+  ['todos','personal','directiva'].forEach(id => {
+    document.getElementById('cf-'+id).classList.remove('activo');
+  });
+  const mapa = {'Todos':'todos','Personal / Lobby':'personal','Junta Directiva':'directiva'};
+  document.getElementById('cf-'+(mapa[filtro]||'todos')).classList.add('activo');
+  const filtrados = filtro==='Todos' ? controlDataCache : controlDataCache.filter(r=>r['Rol']===filtro);
+  renderControl(filtrados);
+}
+
+function renderControl(registros) {
+  if(!registros.length) {
+    document.getElementById('control-area').innerHTML = '<div class="empty">Sin registros aún.<br>Presiona un botón arriba para registrar la primera revisión.</div>';
     return;
   }
-  document.getElementById('control-area').innerHTML = semanas.map((s,i) => {
-    const esAbierta = s['Estado']==='Pendiente' || s['Estado']==='En proceso';
-    const badge = esAbierta ? '<span class="badge badge-corr">Abierta</span>' : '<span class="badge badge-prue">Completa</span>';
-    const admOk = s['Administrador'];
-    const dirOk = s['Directiva'];
-    const btns = esAbierta ? `
-      <div class="control-btns">
-        ${!admOk ? `<button class="btn-guardar" style="font-size:12px;padding:9px" onclick="marcarControl('${s['Semana']}','Administrador')">✓ Soy Administrador</button>` : '<div></div>'}
-        ${!dirOk ? `<button class="btn-guardar" style="font-size:12px;padding:9px;background:var(--azul2)" onclick="marcarControl('${s['Semana']}','Directiva')">✓ Soy Directiva</button>` : '<div></div>'}
-      </div>` : '';
+  document.getElementById('control-area').innerHTML = registros.map(r => {
+    const badgeClass = r['Rol']==='Personal / Lobby' ? 'badge-personal' : 'badge-directiva';
     return `<div class="control-card">
-      <div class="control-header"><span class="control-semana">${s['Semana']}</span>${badge}</div>
-      <div class="control-body">
-        <div><div class="control-rol">Administrador</div><div class="${admOk?'control-ok':'control-pend'}">${admOk ? '✓ '+admOk+' — '+s['Fecha Admin'] : 'Pendiente'}</div></div>
-        <div><div class="control-rol">Directiva</div><div class="${dirOk?'control-ok':'control-pend'}">${dirOk ? '✓ '+dirOk+' — '+s['Fecha Directiva'] : 'Pendiente'}</div></div>
+      <div class="control-header">
+        <span class="control-fecha">${r['Fecha']}</span>
+        <span class="badge ${badgeClass}">${r['Rol']}</span>
       </div>
-      ${btns}
+      <div class="control-body">
+        <div class="control-nombre">${r['Nombre']}</div>
+        ${r['Observación'] ? `<div class="control-obs">${r['Observación']}</div>` : ''}
+      </div>
     </div>`;
   }).join('');
 }
 
-async function marcarControl(semana, rol) {
-  const nombre = prompt(`Tu nombre (${rol}):`);
-  if(!nombre || !nombre.trim()) return;
+function abrirControlForm(rol) {
+  const color = rol==='Personal / Lobby' ? '#2563eb' : '#7c3aed';
+  document.getElementById('modal-titulo').textContent = 'Registrar revisión';
+  const sub = document.getElementById('modal-subtitulo');
+  sub.textContent = rol; sub.style.color = color;
+  document.getElementById('modal-form').innerHTML = `
+    <div class="input-group"><label>Fecha</label><input type="date" id="f-ctrl-fecha" value="${hoy()}"></div>
+    <div class="input-group"><label>Nombre</label><input type="text" id="f-ctrl-nombre" placeholder="Tu nombre completo"></div>
+    <div class="input-group"><label>Observación</label><input type="text" id="f-ctrl-obs" placeholder="Ej: Todo al día, falta registrar GE..."></div>
+    <div class="form-btns">
+      <button class="btn-cancelar" onclick="cerrarFormulario()">Cancelar</button>
+      <button class="btn-guardar" id="btn-guardar" onclick="guardarControlForm('${rol}')">Guardar</button>
+    </div>`;
+  document.getElementById('modal-overlay').classList.add('abierto');
+}
+
+async function guardarControlForm(rol) {
+  const btn = document.getElementById('btn-guardar');
+  const nombre = document.getElementById('f-ctrl-nombre').value.trim();
+  if(!nombre) { mostrarToast('Ingresa tu nombre'); return; }
+  btn.disabled = true; btn.textContent = 'Guardando...';
   try {
-    await api({accion:'guardarControl', semana, rol, nombre: nombre.trim()});
-    mostrarToast('✓ Control registrado');
+    await api({
+      accion:'guardarControl',
+      fecha: document.getElementById('f-ctrl-fecha').value,
+      nombre, rol,
+      observacion: document.getElementById('f-ctrl-obs').value.trim()
+    });
+    cerrarFormulario();
+    mostrarToast('✓ Revisión registrada');
     cargarControl();
-  } catch(e) { mostrarToast('Error al guardar'); }
+  } catch(e) {
+    mostrarToast('Error al guardar');
+    btn.disabled = false; btn.textContent = 'Guardar';
+  }
 }
 
 // ============================================================
