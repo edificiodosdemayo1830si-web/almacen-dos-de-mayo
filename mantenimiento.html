@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Mantenimiento · Dos de Mayo 1830</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --azul:#1a3a5c; --azul2:#2563eb; --verde:#16a34a; --rojo:#dc2626;
+    --amarillo:#d97706; --gris:#64748b; --gris-claro:#f1f5f9;
+    --blanco:#ffffff; --borde:#e2e8f0; --sombra:0 2px 12px rgba(0,0,0,0.10);
+    --radio:14px; --font:'Segoe UI',system-ui,sans-serif;
+  }
+  body { font-family:var(--font); background:var(--gris-claro); color:#1e293b; min-height:100vh; padding-bottom:90px; }
+
+  /* HEADER */
+  .header { background:var(--azul); color:white; padding:14px 16px 12px; position:sticky; top:0; z-index:100; box-shadow:0 2px 8px rgba(0,0,0,0.2); }
+  .header-top { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+  .logo-icono { width:36px; height:36px; background:rgba(255,255,255,0.15); border-radius:9px; display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0; }
+  .header h1 { font-size:14px; font-weight:700; line-height:1.2; }
+  .header h1 span { display:block; font-size:10px; font-weight:400; opacity:0.7; margin-top:1px; }
+  .tabs { display:flex; background:rgba(0,0,0,0.2); border-radius:9px; padding:3px; gap:2px; }
+  .tab { flex:1; padding:6px 0; border:none; background:transparent; color:rgba(255,255,255,0.6); font-size:11px; font-weight:600; border-radius:7px; cursor:pointer; font-family:var(--font); transition:all 0.2s; }
+  .tab.activo { background:white; color:var(--azul); }
+
+  /* CONTENIDO */
+  .contenido { padding:14px; max-width:600px; margin:0 auto; }
+
+  /* CUADERNOS */
+  .cuadernos-scroll { display:flex; gap:7px; overflow-x:auto; padding-bottom:4px; margin-bottom:12px; scrollbar-width:none; }
+  .cuadernos-scroll::-webkit-scrollbar { display:none; }
+  .ctab { flex-shrink:0; display:flex; align-items:center; gap:5px; padding:6px 12px; border-radius:20px; font-size:11px; font-weight:600; border:1.5px solid var(--borde); background:white; color:var(--gris); cursor:pointer; font-family:var(--font); transition:all 0.15s; }
+  .ctab.activo { color:white; border-color:transparent; }
+  .cdot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+
+  /* SUBFILTROS */
+  .subfiltros { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px; }
+  .sf { padding:5px 11px; border-radius:7px; font-size:11px; font-weight:600; border:1.5px solid var(--borde); background:white; color:var(--gris); cursor:pointer; font-family:var(--font); }
+  .sf.activo { background:var(--azul); color:white; border-color:var(--azul); }
+
+  /* BOTÓN PLAN ANUAL */
+  .plan-btn { display:flex; align-items:center; gap:8px; width:100%; padding:11px 14px; background:white; border:1.5px solid var(--borde); border-radius:10px; font-size:13px; font-weight:600; color:var(--azul); cursor:pointer; font-family:var(--font); margin-bottom:14px; }
+  .plan-btn span { margin-left:auto; font-size:11px; color:var(--gris); font-weight:400; }
+
+  /* CARDS REGISTRO */
+  .reg-card { background:white; border-radius:var(--radio); box-shadow:var(--sombra); margin-bottom:10px; overflow:hidden; }
+  .reg-header { padding:10px 14px 9px; border-bottom:1px solid var(--gris-claro); display:flex; justify-content:space-between; align-items:center; }
+  .reg-fecha { font-size:13px; font-weight:700; color:#1e293b; }
+  .badge { font-size:10px; padding:3px 9px; border-radius:20px; font-weight:600; }
+  .badge-prev { background:#dbeafe; color:#1d4ed8; }
+  .badge-corr { background:#fef3c7; color:#92400e; }
+  .badge-prue { background:#dcfce7; color:#166534; }
+  .badge-enc  { background:#e0f2fe; color:#0369a1; }
+  .badge-uso  { background:#fee2e2; color:#991b1b; }
+  .reg-body { padding:10px 14px 12px; display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .reg-field { }
+  .reg-label { font-size:10px; font-weight:600; color:#94a3b8; text-transform:uppercase; letter-spacing:0.3px; margin-bottom:2px; }
+  .reg-value { font-size:13px; color:#1e293b; }
+  .reg-empty { font-size:13px; color:#cbd5e1; font-style:italic; }
+  .reg-alert { font-size:13px; color:#d97706; font-weight:600; }
+  .reg-full { grid-column:1/-1; }
+  .reg-obs { padding:7px 14px; background:#f8fafc; border-top:1px solid var(--gris-claro); font-size:12px; color:var(--gris); }
+
+  /* PLAN ANUAL */
+  .plan-item { background:white; border-radius:12px; box-shadow:var(--sombra); padding:12px 14px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; gap:12px; }
+  .plan-info { flex:1; min-width:0; }
+  .plan-nombre { font-size:13px; font-weight:700; color:#1e293b; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .plan-sub { font-size:11px; color:var(--gris); margin-top:2px; }
+  .plan-badge { flex-shrink:0; font-size:11px; font-weight:600; padding:5px 11px; border-radius:20px; }
+  .plan-venc { background:#fee2e2; color:#991b1b; }
+  .plan-pend { background:#fef3c7; color:#92400e; }
+  .plan-ok   { background:#dcfce7; color:#166534; }
+
+  /* KPIs */
+  .kpis { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:14px; }
+  .kpi { background:white; border-radius:10px; padding:10px 12px; box-shadow:var(--sombra); text-align:center; }
+  .kpi-label { font-size:10px; color:var(--gris); font-weight:600; text-transform:uppercase; margin-bottom:4px; }
+  .kpi-num { font-size:22px; font-weight:800; }
+  .kpi-venc { color:var(--rojo); }
+  .kpi-pend { color:var(--amarillo); }
+  .kpi-ok   { color:var(--verde); }
+
+  /* CONTROL */
+  .control-card { background:white; border-radius:var(--radio); box-shadow:var(--sombra); margin-bottom:10px; overflow:hidden; }
+  .control-header { padding:10px 14px; border-bottom:1px solid var(--gris-claro); display:flex; justify-content:space-between; align-items:center; }
+  .control-semana { font-size:13px; font-weight:700; }
+  .control-body { padding:10px 14px 12px; display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .control-rol { font-size:10px; font-weight:600; color:#94a3b8; text-transform:uppercase; margin-bottom:3px; }
+  .control-ok   { font-size:12px; font-weight:600; color:var(--verde); }
+  .control-pend { font-size:12px; color:var(--gris); font-style:italic; }
+  .control-btns { padding:8px 14px 12px; display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+
+  /* FAB */
+  .fab { position:fixed; bottom:20px; right:20px; width:54px; height:54px; background:var(--azul); color:white; border:none; border-radius:50%; font-size:28px; cursor:pointer; box-shadow:0 4px 14px rgba(26,58,92,0.4); font-family:var(--font); display:flex; align-items:center; justify-content:center; z-index:90; transition:transform 0.15s; }
+  .fab:active { transform:scale(0.93); }
+
+  /* MODAL */
+  .modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:200; align-items:flex-end; justify-content:center; }
+  .modal-overlay.abierto { display:flex; }
+  .modal { background:white; border-radius:20px 20px 0 0; width:100%; max-width:600px; padding:20px 16px 36px; animation:slideUp 0.25s ease; max-height:92vh; overflow-y:auto; }
+  @keyframes slideUp { from{transform:translateY(100%)} to{transform:translateY(0)} }
+  .modal-handle { width:40px; height:4px; background:var(--borde); border-radius:2px; margin:0 auto 16px; }
+  .modal-titulo { font-size:16px; font-weight:700; margin-bottom:2px; }
+  .modal-subtitulo { font-size:12px; margin-bottom:16px; font-weight:600; }
+
+  /* FORM */
+  .input-group { margin-bottom:12px; }
+  .input-group label { display:block; font-size:11px; font-weight:600; color:var(--gris); margin-bottom:5px; text-transform:uppercase; letter-spacing:0.4px; }
+  .input-group input, .input-group select, .input-group textarea {
+    width:100%; padding:11px 13px; border:1.5px solid var(--borde); border-radius:10px;
+    font-size:14px; font-family:var(--font); color:#1e293b; background:white; -webkit-appearance:none;
+  }
+  .input-group input:focus, .input-group select:focus, .input-group textarea:focus { outline:none; border-color:var(--azul2); }
+  .input-group textarea { resize:none; height:65px; }
+  .row2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .radio-group { display:flex; gap:6px; flex-wrap:wrap; }
+  .radio-opt { padding:7px 12px; border-radius:8px; font-size:12px; font-weight:600; border:1.5px solid var(--borde); background:white; color:var(--gris); cursor:pointer; font-family:var(--font); transition:all 0.15s; }
+  .radio-opt.sel { border-color:var(--azul); background:#dbeafe; color:var(--azul); }
+  .form-btns { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:16px; }
+  .btn-cancelar { padding:12px; border:1.5px solid var(--borde); border-radius:10px; background:white; font-size:14px; font-weight:600; cursor:pointer; font-family:var(--font); color:var(--gris); }
+  .btn-guardar { padding:12px; border:none; border-radius:10px; background:var(--azul); color:white; font-size:14px; font-weight:700; cursor:pointer; font-family:var(--font); }
+  .btn-guardar:disabled { background:#94a3b8; cursor:not-allowed; }
+
+  /* TOAST */
+  .toast { display:none; position:fixed; top:75px; left:50%; transform:translateX(-50%); background:#1e293b; color:white; padding:10px 20px; border-radius:10px; font-size:13px; font-weight:600; z-index:300; white-space:nowrap; }
+  .toast.show { display:block; }
+
+  /* LOADING */
+  .loading { text-align:center; padding:30px; color:var(--gris); font-size:13px; }
+  .empty { text-align:center; padding:30px 16px; color:#94a3b8; font-size:13px; line-height:1.6; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-top">
+    <div class="logo-icono">🔧</div>
+    <h1>Mantenimiento de Equipos<span>Edificio Dos de Mayo 1830</span></h1>
+  </div>
+  <div class="tabs">
+    <button class="tab activo" onclick="mostrarVista('principal')">Principal</button>
+    <button class="tab" onclick="mostrarVista('plan')">Plan anual</button>
+    <button class="tab" onclick="mostrarVista('control')">Control</button>
+  </div>
+</div>
+
+<!-- VISTA PRINCIPAL -->
+<div id="vista-principal" class="contenido">
+  <div class="cuadernos-scroll" id="cuadernos-tabs"></div>
+  <div id="subfiltros-area"></div>
+  <div id="registros-area"><div class="loading">Cargando...</div></div>
+</div>
+
+<!-- VISTA PLAN ANUAL -->
+<div id="vista-plan" class="contenido" style="display:none">
+  <div class="kpis">
+    <div class="kpi"><div class="kpi-label">Vencidos</div><div class="kpi-num kpi-venc" id="kpi-venc">-</div></div>
+    <div class="kpi"><div class="kpi-label">Pendientes</div><div class="kpi-num kpi-pend" id="kpi-pend">-</div></div>
+    <div class="kpi"><div class="kpi-label">Al día</div><div class="kpi-num kpi-ok" id="kpi-ok">-</div></div>
+  </div>
+  <div id="plan-area"><div class="loading">Cargando plan anual...</div></div>
+</div>
+
+<!-- VISTA CONTROL -->
+<div id="vista-control" class="contenido" style="display:none">
+  <div id="control-area"><div class="loading">Cargando...</div></div>
+</div>
+
+<!-- FAB -->
+<button class="fab" id="fab-btn" onclick="abrirFormulario()">+</button>
+
+<!-- MODAL FORMULARIO -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-titulo">Nuevo registro</div>
+    <div class="modal-subtitulo" id="modal-subtitulo"></div>
+    <div id="modal-form"></div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+const URL_SCRIPT = 'https://script.google.com/macros/s/AKfycbwedpYGORu_OaFOXN2P_YwvDctMXly_fpEi2VzkTBwCdDXLOszAiKWBO7TbH27UrIPF/exec';
+
+const CUADERNOS = [
+  {id:'Ascensores',        label:'Ascensores',           color:'#2563eb', sub:['Todos','01','02','Servicio']},
+  {id:'GrupoElectrogeno',  label:'Grupo electrógeno',    color:'#d97706', sub:[]},
+  {id:'AguaDesague',       label:'Agua / Desagüe',       color:'#16a34a', sub:['Todos','Limpieza','Bombas sumidero','Bombas agua','Contra incendios']},
+  {id:'Jardin',            label:'Jardín',               color:'#65a30d', sub:[]},
+  {id:'EquiposVarios',     label:'Equipos varios',       color:'#dc2626', sub:['Todos','Extintores','Seg. eléctrica','Sistemas seg.','Pileta']},
+  {id:'InstalacionesElectricas', label:'Inst. eléctricas', color:'#7c3aed', sub:[]},
+  {id:'PuertasVehiculares',label:'Puertas vehiculares',  color:'#0f766e', sub:[]},
+  {id:'Luminarias',        label:'Luminarias',           color:'#b45309', sub:[]}
+];
+
+const TIPOS_BADGE = {
+  'Preventivo':'badge-prev','Correctivo':'badge-corr','Prueba':'badge-prue',
+  'Encendido prueba':'badge-enc','Uso emergencia':'badge-uso',
+  'Mantenimiento semanal':'badge-prue','Abonamiento':'badge-prev',
+  'Abono foliar':'badge-prue','Fumigación':'badge-corr'
+};
+
+let vistaActual = 'principal';
+let cuadernoActivo = 'Ascensores';
+let subfiltroActivo = 'Todos';
+let planData = [];
+
+// ============================================================
+// NAVEGACIÓN
+// ============================================================
+function mostrarVista(v) {
+  vistaActual = v;
+  ['principal','plan','control'].forEach(x => {
+    document.getElementById('vista-'+x).style.display = x===v ? 'block' : 'none';
+  });
+  document.querySelectorAll('.tab').forEach((t,i) => {
+    t.classList.toggle('activo', ['principal','plan','control'][i]===v);
+  });
+  document.getElementById('fab-btn').style.display = v==='principal' ? 'flex' : 'none';
+  if(v==='principal') { renderCuadernos(); cargarRegistros(); }
+  if(v==='plan') cargarPlanAnual();
+  if(v==='control') cargarControl();
+}
+
+// ============================================================
+// CUADERNOS Y SUBFILTROS
+// ============================================================
+function renderCuadernos() {
+  const c = document.getElementById('cuadernos-tabs');
+  c.innerHTML = '';
+  CUADERNOS.forEach(cu => {
+    const b = document.createElement('button');
+    b.className = 'ctab' + (cu.id===cuadernoActivo ? ' activo' : '');
+    if(cu.id===cuadernoActivo) b.style.background = cu.color;
+    b.innerHTML = `<span class="cdot" style="background:${cu.color}"></span>${cu.label}`;
+    b.onclick = () => { cuadernoActivo=cu.id; subfiltroActivo='Todos'; renderCuadernos(); renderSubfiltros(); cargarRegistros(); };
+    c.appendChild(b);
+  });
+  renderSubfiltros();
+}
+
+function renderSubfiltros() {
+  const cu = CUADERNOS.find(c=>c.id===cuadernoActivo);
+  const area = document.getElementById('subfiltros-area');
+  area.innerHTML = '';
+  if(!cu.sub.length) return;
+  const div = document.createElement('div'); div.className='subfiltros';
+  cu.sub.forEach(s => {
+    const b = document.createElement('button');
+    b.className = 'sf' + (s===subfiltroActivo ? ' activo' : '');
+    b.textContent = s;
+    b.onclick = () => { subfiltroActivo=s; renderSubfiltros(); cargarRegistros(); };
+    div.appendChild(b);
+  });
+  area.appendChild(div);
+}
+
+// ============================================================
+// CARGAR REGISTROS
+// ============================================================
+async function cargarRegistros() {
+  document.getElementById('registros-area').innerHTML = '<div class="loading">Cargando registros...</div>';
+  try {
+    const filtro = subfiltroActivo && subfiltroActivo!=='Todos' ? {columna:'Ascensor', valor:subfiltroActivo} : null;
+    const res = await api({accion:'obtenerRegistros', cuaderno:cuadernoActivo, limite:15, filtro});
+    renderRegistros(res.registros || []);
+  } catch(e) {
+    document.getElementById('registros-area').innerHTML = '<div class="empty">Error al cargar. Verifica tu conexión.</div>';
+  }
+}
+
+function renderRegistros(registros) {
+  const area = document.getElementById('registros-area');
+  if(!registros.length) {
+    area.innerHTML = '<div class="empty">Sin registros aún.<br>Presiona <strong>+</strong> para agregar el primero.</div>';
+    return;
+  }
+  area.innerHTML = registros.map(r => tarjetaRegistro(r)).join('');
+}
+
+function tarjetaRegistro(r) {
+  const tipo = r['Tipo'] || r['Actividad'] || '';
+  const badgeClass = TIPOS_BADGE[tipo] || 'badge-prev';
+  const fechaEj = r['Fecha Ejecutada'] || r['Fecha ejecutada'] || '';
+  const fechaPr = r['Fecha Programada'] || '';
+  const empresa = r['Empresa'] || r['Empresa / Responsable'] || '';
+  const costo = r['Costo S/'] ? 'S/ ' + r['Costo S/'] : '';
+  const obs = r['Descripción'] || '';
+
+  let camposExtra = '';
+
+  if(cuadernoActivo==='Ascensores') {
+    const asc = r['Ascensor'] || '';
+    const ndoc = r['N° Documento'] || '—';
+    const piezas = r['Piezas Cambiadas'] || '';
+    const pedido = r['Pedido de Piezas'] || '';
+    camposExtra = `
+      <div class="reg-field"><div class="reg-label">Ascensor</div><div class="reg-value">${asc}</div></div>
+      <div class="reg-field"><div class="reg-label">N° documento</div><div class="reg-value">${ndoc}</div></div>
+      <div class="reg-field"><div class="reg-label">Piezas cambiadas</div><div class="${piezas?'reg-value':'reg-empty'}">${piezas||'—'}</div></div>
+      <div class="reg-field"><div class="reg-label">Pedido de piezas</div><div class="${pedido?'reg-alert':'reg-empty'}">${pedido?'⚠ '+pedido:'—'}</div></div>`;
+  } else if(cuadernoActivo==='AguaDesague'||cuadernoActivo==='EquiposVarios') {
+    const grupo = r['Grupo']||''; const equipo = r['Equipo']||'';
+    camposExtra = `
+      <div class="reg-field"><div class="reg-label">Grupo</div><div class="reg-value">${grupo}</div></div>
+      <div class="reg-field"><div class="reg-label">Equipo</div><div class="reg-value">${equipo}</div></div>`;
+  } else if(cuadernoActivo==='Luminarias') {
+    const zona = r['Zona']||''; const foco = r['Tipo de Foco']||''; const cant = r['Cantidad']||'';
+    camposExtra = `
+      <div class="reg-field"><div class="reg-label">Zona</div><div class="reg-value">${zona}</div></div>
+      <div class="reg-field"><div class="reg-label">Cantidad</div><div class="reg-value">${cant} unid.</div></div>
+      <div class="reg-field reg-full"><div class="reg-label">Tipo de foco</div><div class="reg-value">${foco}</div></div>`;
+  } else if(cuadernoActivo==='PuertasVehiculares') {
+    const paneles = r['Paneles']||''; const mec = r['Sistema Mecánico']||'';
+    camposExtra = `
+      <div class="reg-field"><div class="reg-label">Paneles</div><div class="${paneles?'reg-value':'reg-empty'}">${paneles||'—'}</div></div>
+      <div class="reg-field"><div class="reg-label">Sistema mecánico</div><div class="${mec?'reg-value':'reg-empty'}">${mec||'—'}</div></div>`;
+  }
+
+  const fechaDisplay = fechaEj || fechaPr || '—';
+  const cuadernoLabel = cuadernoActivo==='GrupoElectrogeno'&&!tipo ? '' : '';
+
+  return `<div class="reg-card">
+    <div class="reg-header">
+      <span class="reg-fecha">${fechaDisplay}</span>
+      <span class="badge ${badgeClass}">${tipo}</span>
+    </div>
+    <div class="reg-body">
+      ${camposExtra}
+      <div class="reg-field"><div class="reg-label">Empresa / Resp.</div><div class="reg-value">${empresa||'—'}</div></div>
+      <div class="reg-field"><div class="reg-label">Costo</div><div class="${costo?'reg-value':'reg-empty'}">${costo||'—'}</div></div>
+    </div>
+    ${obs ? `<div class="reg-obs">Obs: ${obs}</div>` : ''}
+  </div>`;
+}
+
+// ============================================================
+// PLAN ANUAL
+// ============================================================
+async function cargarPlanAnual() {
+  document.getElementById('plan-area').innerHTML = '<div class="loading">Calculando plan anual...</div>';
+  try {
+    const res = await api({accion:'obtenerPlanAnual'});
+    planData = res.plan || [];
+    renderPlanAnual(planData);
+  } catch(e) {
+    document.getElementById('plan-area').innerHTML = '<div class="empty">Error al cargar el plan.</div>';
+  }
+}
+
+function renderPlanAnual(plan) {
+  const venc = plan.filter(p=>p.estado==='vencido').length;
+  const pend = plan.filter(p=>p.estado==='pendiente').length;
+  const ok   = plan.filter(p=>p.estado==='ejecutado').length;
+  document.getElementById('kpi-venc').textContent = venc;
+  document.getElementById('kpi-pend').textContent = pend;
+  document.getElementById('kpi-ok').textContent   = ok;
+
+  if(!plan.length) { document.getElementById('plan-area').innerHTML='<div class="empty">No hay equipos con mantenimiento programado.</div>'; return; }
+
+  const meses = ['','Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Set','Oct','Nov','Dic'];
+  document.getElementById('plan-area').innerHTML = plan.map(p => {
+    const badgeClass = p.estado==='vencido' ? 'plan-venc' : p.estado==='pendiente' ? 'plan-pend' : 'plan-ok';
+    const badgeText  = p.estado==='vencido' ? 'Vencido' : p.estado==='pendiente' ?
+      (p.diasRestantes!==null ? `${p.diasRestantes} días` : 'Pendiente') : '✓ Al día';
+    const sub = [p.periodicidad, p.mesProg>0?meses[p.mesProg]:null, p.proveedor].filter(Boolean).join(' · ');
+    return `<div class="plan-item">
+      <div class="plan-info">
+        <div class="plan-nombre">${p.equipo} — ${p.actividad}</div>
+        <div class="plan-sub">${sub}</div>
+      </div>
+      <span class="plan-badge ${badgeClass}">${badgeText}</span>
+    </div>`;
+  }).join('');
+}
+
+// ============================================================
+// CONTROL SEMANAL
+// ============================================================
+async function cargarControl() {
+  document.getElementById('control-area').innerHTML = '<div class="loading">Cargando control...</div>';
+  try {
+    const res = await api({accion:'obtenerControl'});
+    renderControl(res.semanas || []);
+  } catch(e) {
+    document.getElementById('control-area').innerHTML = '<div class="empty">Error al cargar el control.</div>';
+  }
+}
+
+function renderControl(semanas) {
+  if(!semanas.length) {
+    document.getElementById('control-area').innerHTML = '<div class="empty">No hay semanas registradas aún.</div>';
+    return;
+  }
+  document.getElementById('control-area').innerHTML = semanas.map((s,i) => {
+    const esAbierta = s['Estado']==='Pendiente' || s['Estado']==='En proceso';
+    const badge = esAbierta ? '<span class="badge badge-corr">Abierta</span>' : '<span class="badge badge-prue">Completa</span>';
+    const admOk = s['Administrador'];
+    const dirOk = s['Directiva'];
+    const btns = esAbierta ? `
+      <div class="control-btns">
+        ${!admOk ? `<button class="btn-guardar" style="font-size:12px;padding:9px" onclick="marcarControl('${s['Semana']}','Administrador')">✓ Soy Administrador</button>` : '<div></div>'}
+        ${!dirOk ? `<button class="btn-guardar" style="font-size:12px;padding:9px;background:var(--azul2)" onclick="marcarControl('${s['Semana']}','Directiva')">✓ Soy Directiva</button>` : '<div></div>'}
+      </div>` : '';
+    return `<div class="control-card">
+      <div class="control-header"><span class="control-semana">${s['Semana']}</span>${badge}</div>
+      <div class="control-body">
+        <div><div class="control-rol">Administrador</div><div class="${admOk?'control-ok':'control-pend'}">${admOk ? '✓ '+admOk+' — '+s['Fecha Admin'] : 'Pendiente'}</div></div>
+        <div><div class="control-rol">Directiva</div><div class="${dirOk?'control-ok':'control-pend'}">${dirOk ? '✓ '+dirOk+' — '+s['Fecha Directiva'] : 'Pendiente'}</div></div>
+      </div>
+      ${btns}
+    </div>`;
+  }).join('');
+}
+
+async function marcarControl(semana, rol) {
+  const nombre = prompt(`Tu nombre (${rol}):`);
+  if(!nombre || !nombre.trim()) return;
+  try {
+    await api({accion:'guardarControl', semana, rol, nombre: nombre.trim()});
+    mostrarToast('✓ Control registrado');
+    cargarControl();
+  } catch(e) { mostrarToast('Error al guardar'); }
+}
+
+// ============================================================
+// FORMULARIO NUEVO REGISTRO
+// ============================================================
+function abrirFormulario() {
+  const cu = CUADERNOS.find(c=>c.id===cuadernoActivo);
+  const sub = document.getElementById('modal-subtitulo');
+  sub.textContent = cu.label;
+  sub.style.color = cu.color;
+  document.getElementById('modal-form').innerHTML = buildForm(cu);
+  document.getElementById('modal-overlay').classList.add('abierto');
+}
+
+function cerrarFormulario() {
+  document.getElementById('modal-overlay').classList.remove('abierto');
+}
+
+function buildForm(cu) {
+  let h = '';
+
+  // Fechas
+  h += `<div class="row2">
+    <div class="input-group"><label>Fecha programada</label><input type="date" id="f-fecha-prog"></div>
+    <div class="input-group"><label>Fecha ejecutada</label><input type="date" id="f-fecha-ejec" value="${hoy()}"></div>
+  </div>`;
+
+  // Tipo según cuaderno
+  const tipos = tiposPorCuaderno(cu.id);
+  if(tipos.length) {
+    h += `<div class="input-group"><label>Tipo</label><div class="radio-group" id="rg-tipo">`;
+    tipos.forEach(t => h += `<button type="button" class="radio-opt" onclick="selRadio(this,'rg-tipo')">${t}</button>`);
+    h += `</div></div>`;
+  }
+
+  // Campos específicos
+  if(cu.id==='Ascensores') {
+    h += `<div class="input-group"><label>Ascensor</label><div class="radio-group" id="rg-asc">
+      <button type="button" class="radio-opt" onclick="selRadio(this,'rg-asc')">01</button>
+      <button type="button" class="radio-opt" onclick="selRadio(this,'rg-asc')">02</button>
+      <button type="button" class="radio-opt" onclick="selRadio(this,'rg-asc')">Servicio</button>
+    </div></div>`;
+    h += `<div class="row2">
+      <div class="input-group"><label>Empresa</label><input type="text" id="f-empresa" value="OTIS"></div>
+      <div class="input-group"><label>N° documento</label><input type="text" id="f-ndoc" placeholder="OT-2025-..."></div>
+    </div>`;
+    h += `<div class="input-group"><label>Piezas cambiadas</label><input type="text" id="f-piezas" placeholder="Descripción o dejar vacío"></div>`;
+    h += `<div class="input-group"><label>Pedido de piezas</label><input type="text" id="f-pedido" placeholder="Descripción o dejar vacío"></div>`;
+
+  } else if(cu.id==='AguaDesague') {
+    h += `<div class="row2">
+      <div class="input-group"><label>Grupo</label><select id="f-grupo">
+        <option>Limpieza / Fumigación</option><option>Bombas sumidero</option>
+        <option>Bombas de agua</option><option>Contra incendios</option>
+      </select></div>
+      <div class="input-group"><label>Equipo específico</label><input type="text" id="f-equipo" placeholder="Ej: Bomba de agua 2"></div>
+    </div>`;
+    h += `<div class="row2">
+      <div class="input-group"><label>Empresa</label><input type="text" id="f-empresa"></div>
+      <div class="input-group"><label>Costo S/</label><input type="number" id="f-costo" placeholder="0.00"></div>
+    </div>`;
+
+  } else if(cu.id==='EquiposVarios') {
+    h += `<div class="row2">
+      <div class="input-group"><label>Grupo</label><select id="f-grupo">
+        <option>Extintores</option><option>Seguridad eléctrica</option>
+        <option>Sistemas de seguridad</option><option>Pileta</option>
+      </select></div>
+      <div class="input-group"><label>Equipo específico</label><input type="text" id="f-equipo" placeholder="Ej: Extintor recarga"></div>
+    </div>`;
+    h += `<div class="row2">
+      <div class="input-group"><label>Empresa</label><input type="text" id="f-empresa"></div>
+      <div class="input-group"><label>Costo S/</label><input type="number" id="f-costo" placeholder="0.00"></div>
+    </div>`;
+
+  } else if(cu.id==='Luminarias') {
+    h += `<div class="input-group"><label>Zona</label><select id="f-zona">
+      <option>Sótano 1</option><option>Sótano 2</option><option>Sótano 3</option>
+      <option>Piso 1</option><option>Pisos 2-15</option><option>Fachada</option>
+      <option>Jardín</option><option>Lobby</option><option>Ingreso principal</option>
+    </select></div>`;
+    h += `<div class="input-group"><label>Tipo de foco</label><select id="f-foco">
+      <option>Globo con sensor — estacionamiento</option>
+      <option>Globo sin sensor — estacionamiento</option>
+      <option>LED con sensor — escaleras evacuación</option>
+      <option>Dicroico GU10 — fachada</option>
+      <option>Dicroico GU10 — techo lobby</option>
+      <option>LED 14W frío — baño / aplique tortuga / aplique brazo fachada dpto</option>
+      <option>LED 14W cálido — lámparas lobby / aplique brazo jardín</option>
+      <option>Aplique cuadrado 4W — jardín interior</option>
+      <option>Reflector 50W con sensor — exterior</option>
+      <option>Foco estaca 12V — jardín interior</option>
+      <option>Foco estaca 6W luz cálida — ingreso principal</option>
+      <option>Foco sumergible — pileta</option>
+    </select></div>`;
+    h += `<div class="row2">
+      <div class="input-group"><label>Cantidad</label><input type="number" id="f-cantidad" min="1" value="1"></div>
+      <div class="input-group"><label>Costo S/</label><input type="number" id="f-costo" placeholder="0.00"></div>
+    </div>`;
+    h += `<div class="input-group"><label>Responsable</label><input type="text" id="f-empresa"></div>`;
+
+  } else if(cu.id==='PuertasVehiculares') {
+    h += `<div class="row2">
+      <div class="input-group"><label>Empresa</label><input type="text" id="f-empresa" value="PIZAN"></div>
+      <div class="input-group"><label>Costo S/</label><input type="number" id="f-costo" placeholder="0.00"></div>
+    </div>`;
+    h += `<div class="input-group"><label>Paneles</label><div class="radio-group" id="rg-paneles">
+      <button type="button" class="radio-opt" onclick="selRadio(this,'rg-paneles')">Nuevo</button>
+      <button type="button" class="radio-opt" onclick="selRadio(this,'rg-paneles')">Pintado</button>
+      <button type="button" class="radio-opt" onclick="selRadio(this,'rg-paneles')">—</button>
+    </div></div>`;
+    h += `<div class="input-group"><label>Sistema mecánico intervenido</label><input type="text" id="f-mec" placeholder="Ej: 4 bisagras, 12 roldanas"></div>`;
+    h += `<div class="input-group"><label>Control remoto / receptor</label><div class="radio-group" id="rg-ctrl">
+      <button type="button" class="radio-opt" onclick="selRadio(this,'rg-ctrl')">Receptor</button>
+      <button type="button" class="radio-opt" onclick="selRadio(this,'rg-ctrl')">Equipo básico</button>
+      <button type="button" class="radio-opt" onclick="selRadio(this,'rg-ctrl')">Equipo adicional</button>
+      <button type="button" class="radio-opt" onclick="selRadio(this,'rg-ctrl')">—</button>
+    </div></div>`;
+    h += `<div class="row2">
+      <div class="input-group"><label>Temporizador</label><div class="radio-group" id="rg-temp">
+        <button type="button" class="radio-opt" onclick="selRadio(this,'rg-temp')">Kit completo</button>
+        <button type="button" class="radio-opt" onclick="selRadio(this,'rg-temp')">—</button>
+      </div></div>
+      <div class="input-group"><label>Sensor infrarrojo</label><div class="radio-group" id="rg-sensor">
+        <button type="button" class="radio-opt" onclick="selRadio(this,'rg-sensor')">Cambiado</button>
+        <button type="button" class="radio-opt" onclick="selRadio(this,'rg-sensor')">—</button>
+      </div></div>
+    </div>`;
+
+  } else if(cu.id==='Jardin') {
+    h += `<div class="row2">
+      <div class="input-group"><label>Empresa / Responsable</label><input type="text" id="f-empresa"></div>
+      <div class="input-group"><label>Costo S/</label><input type="number" id="f-costo" placeholder="0.00"></div>
+    </div>`;
+  } else {
+    h += `<div class="row2">
+      <div class="input-group"><label>Empresa / Responsable</label><input type="text" id="f-empresa"></div>
+      <div class="input-group"><label>Costo S/</label><input type="number" id="f-costo" placeholder="0.00"></div>
+    </div>`;
+  }
+
+  // Descripción siempre
+  h += `<div class="input-group"><label>Descripción / observaciones</label><textarea id="f-desc" placeholder="Opcional..."></textarea></div>`;
+  h += `<div class="form-btns">
+    <button class="btn-cancelar" onclick="cerrarFormulario()">Cancelar</button>
+    <button class="btn-guardar" id="btn-guardar" onclick="guardarRegistro()">Guardar</button>
+  </div>`;
+  return h;
+}
+
+function selRadio(el, grupoId) {
+  document.querySelectorAll(`#${grupoId} .radio-opt`).forEach(b => b.classList.remove('sel'));
+  el.classList.add('sel');
+}
+
+async function guardarRegistro() {
+  const btn = document.getElementById('btn-guardar');
+  btn.disabled = true; btn.textContent = 'Guardando...';
+
+  const registro = {};
+  const cu = CUADERNOS.find(c=>c.id===cuadernoActivo);
+
+  // Campos comunes
+  registro['Fecha Programada'] = val('f-fecha-prog');
+  registro['Fecha Ejecutada']  = val('f-fecha-ejec');
+  registro['Tipo']             = selVal('rg-tipo');
+  registro['Actividad']        = selVal('rg-tipo');
+  registro['Empresa']          = val('f-empresa');
+  registro['Costo S/']         = val('f-costo');
+  registro['Descripción']      = val('f-desc');
+
+  // Campos específicos
+  if(cu.id==='Ascensores') {
+    registro['Ascensor']          = selVal('rg-asc');
+    registro['N° Documento']      = val('f-ndoc');
+    registro['Piezas Cambiadas']  = val('f-piezas');
+    registro['Pedido de Piezas']  = val('f-pedido');
+  } else if(cu.id==='AguaDesague'||cu.id==='EquiposVarios') {
+    registro['Grupo']  = val('f-grupo');
+    registro['Equipo'] = val('f-equipo');
+  } else if(cu.id==='Luminarias') {
+    registro['Zona']        = val('f-zona');
+    registro['Tipo de Foco']= val('f-foco');
+    registro['Cantidad']    = val('f-cantidad');
+  } else if(cu.id==='PuertasVehiculares') {
+    registro['Paneles']          = selVal('rg-paneles');
+    registro['Sistema Mecánico'] = val('f-mec');
+    registro['Control Remoto']   = selVal('rg-ctrl');
+    registro['Temporizador']     = selVal('rg-temp');
+    registro['Sensor']           = selVal('rg-sensor');
+  }
+
+  try {
+    await api({accion:'guardarRegistro', cuaderno:cuadernoActivo, registro});
+    cerrarFormulario();
+    mostrarToast('✓ Registro guardado');
+    cargarRegistros();
+  } catch(e) {
+    mostrarToast('Error al guardar. Intenta de nuevo.');
+    btn.disabled = false; btn.textContent = 'Guardar';
+  }
+}
+
+// ============================================================
+// HELPERS
+// ============================================================
+function tiposPorCuaderno(id) {
+  const t = {
+    Ascensores:['Preventivo','Correctivo'],
+    GrupoElectrogeno:['Preventivo','Correctivo','Encendido prueba','Uso emergencia'],
+    AguaDesague:['Preventivo','Correctivo','Prueba'],
+    Jardin:['Mantenimiento semanal','Abonamiento','Abono foliar','Fumigación'],
+    EquiposVarios:['Preventivo','Correctivo','Prueba'],
+    InstalacionesElectricas:['Preventivo','Correctivo'],
+    PuertasVehiculares:['Preventivo','Correctivo'],
+    Luminarias:[]
+  };
+  return t[id] || [];
+}
+
+function val(id) {
+  const el = document.getElementById(id);
+  return el ? el.value.trim() : '';
+}
+
+function selVal(grupoId) {
+  const el = document.querySelector(`#${grupoId} .sel`);
+  return el ? el.textContent.trim() : '';
+}
+
+function hoy() {
+  const d = new Date();
+  return d.getFullYear()+'-'+(d.getMonth()+1).toString().padStart(2,'0')+'-'+d.getDate().toString().padStart(2,'0');
+}
+
+function mostrarToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+async function api(datos) {
+  const res = await fetch(URL_SCRIPT, {
+    method:'POST',
+    body: JSON.stringify(datos)
+  });
+  const json = await res.json();
+  if(json.error) throw new Error(json.error);
+  return json;
+}
+
+// ============================================================
+// INICIO
+// ============================================================
+renderCuadernos();
+cargarRegistros();
+</script>
+</body>
+</html>
